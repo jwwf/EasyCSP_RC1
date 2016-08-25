@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:38">
+<Class name="EasyCSP.Web.Client.ScriptFileQueue">
+<Description>
+A structure for storing requests for javascript files output in a specified output order.</Description>
+<Abstract>1</Abstract>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64140,56913.61154</TimeChanged>
+<TimeCreated>64120,36906.687532</TimeCreated>
+
+<Property name="scriptFilesQueue">
+<Description><![CDATA[
+Queue(page_position, request_order, script_id=>script_def)]]></Description>
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Method name="addPackage">
+<Description>
+The first parameter is the name of the package being added. Both scriptSource and dependencies may
+be specified as a Cache %List structure or as a comma-separated string. Whitespace will automatically
+be removed from comma-separated strings, thus "abc,def" and "abc, def" and $lb("abc","def") are
+functionally equivalent.</Description>
+<FormalSpec>packageName:%String="",packageUrl:%String="",dependencies:%List=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(packageName)="" quit 0
+    
+    if $get(packageUrl)="" quit 0   
+    
+    set pkg = ##class(EasyCSP.Core.ParameterList).%New()
+    d pkg.set("url", "js/" _ packageUrl)
+    d pkg.set("depends", dependencies)
+    
+    d ..packages.set(packageName, pkg)
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="dequeueFile">
+<FormalSpec>pagePosition:%Integer=0</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    set:+$get(pagePosition)=0 pagePosition = 1
+    set:+$get(pagePosition)>5 pagePosition = 5
+    
+    //do ..debugDump(..scriptFilesQueue)
+    
+    set queue = ..scriptFilesQueue.get(pagePosition) ; get the array of requests
+    quit:queue="" output
+    
+    set queueId = queue.Next()
+    
+    while queueId '= "" {
+        set entry = queue.get(queueId) ; get the scriptDef at this key
+        set entryKey = entry.Next()
+        set entryContent = entry.get(entryKey)
+        if $get(entryContent)["HashArray" set entryContent = entryContent.get(entryKey)
+        //do ..debugDump("Dequeuing script file at position "_pagePosition_", key is "_entryKey)
+        //do ..debugDump(entry)
+        //do ..debugDump(entryContent)
+        do output.WriteLine(entryContent)
+        set queueId = queue.Next(queueId)
+    } 
+    
+    quit output
+]]></Implementation>
+</Method>
+
+<Method name="hasScriptFileId">
+<Description>
+"structure" is a core array containing script definitions in
+the order in which they were added.</Description>
+<FormalSpec>scriptId:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(scriptId)="" 0
+    set found = 0
+    
+    set positionId = ..scriptFilesQueue.Next() ; for each page position
+    while positionId '= "" {
+        set queue = ..scriptFilesQueue.get(positionId) ; the queue is an array of definitions
+        set queueId = queue.Next() ; foreach definition at this position
+        while queueId '= "" {
+            set definition = queue.get(queueId)
+            if definition.Next() = scriptId {
+                set found = 1
+                quit
+            }
+            set queueId = queue.Next(queueId)
+        }
+        quit:found
+        set positionId = ..scriptFilesQueue.Next(positionId)
+    }
+    
+    quit found
+]]></Implementation>
+</Method>
+
+<Method name="hasPackage">
+<Description>
+Return TRUE if a package is available. Packages above and beyond the
+default set can be added any time before a page is rendered.</Description>
+<FormalSpec>name:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(name)="" 0
+    quit ..packages.isset(name)
+]]></Implementation>
+</Method>
+
+<Method name="initCorePackages">
+<Implementation><![CDATA[
+    set ..packages = ##class(EasyCSP.Core.ParameterList).%New()
+    
+    if %EasyCSPDebugging {
+        do ..addPackage("jquery", "jquery-2.1.3.js")
+    } else {
+        do ..addPackage("jquery", "jquery-2.1.3.min.js")
+    }
+    do ..addPackage("jqueryui", "source/jquery-ui/jquery-ui.min.js", "jquery")
+    do ..addPackage("bootstrap", "source/bootstrap/dist/js/bootstrap.min.js", "jquery")
+    do ..addPackage("modernizr", "libs/modernizr.custom.20160725.js", "jquery")
+    
+    do ..addPackage("bgiframe", "source/jquery.bgiframe.js", "jquery")
+    do ..addPackage("ajaxqueue", "source/jquery.ajaxqueue.js", "jquery")
+    do ..addPackage("autocomplete", "source/jquery.autocomplete.js", $lb("jquery","bgiframe","ajaxqueue"))
+        
+    do ..addPackage("cookie", "source/jquery.cookie.js", "jquery")
+    do ..addPackage("treeview", "source/jquery.treeview.js,jquery.treeview.edit.js,jquery.treeview.async.js", "jquery,cookie")
+    do ..addPackage("multifile", "source/jquery.multifile.js", "jquery")
+    do ..addPackage("metadata", "source/jquery.metadata.js", "jquery")
+    
+    do ..addPackage("history", "source/jquery.history.js", "jquery") // not showing up
+    do ..addPackage("prepareTransition", "libs/preparetransition.min.js", "jquery")
+    do ..addPackage("selectivizr", "libs/selectivizr.js", "jquery") // not showing up
+    do ..addPackage("main", "main.js", "modernizr,selectivizr")
+    do ..addPackage("head", "libs/head.js", "main")
+    
+    do ..addPackage("login", "libs/login.js", "bootstrap")
+    
+    do ..addPackage("validation", "jquery-validate-1.13.1.js", "jquery")
+    
+    do ..addPackage("modal", "libs/modal.js", "jqueryui")
+    
+    do ..addPackage("impromptu", "impromptu/jquery-impromptu.js", "jquery")
+    
+    do ..addPackage("multiselect", "lou-multi-select-cf6d6c6/js/jquery.multi-select.js", "jquery")
+    
+    do ..addPackage("showhidepassword", "bootstrap-show-password-master/bootstrap-show-password.min.js", "bootstrap")
+    
+    Quit
+]]></Implementation>
+</Method>
+
+<Method name="queueFileOnHead">
+<Description>
+Insert a script definition into the queue at the start, moving all other
+definitions back one position.</Description>
+<FormalSpec>scriptId:%String="",scriptDef:%String="",pagePosition:%Integer=1</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // The script must be identified to avoid duplication
+    quit:$get(scriptId)="" $$$ERROR(1, "Script ID can not be empty.")
+    
+    // The script must be contained in a valid definition object
+    quit:$get(scriptDef)'["ScriptDefinition" $$$ERROR(2, "Script definition is not an instance of EasyCSP.Web.Client.ScriptDefinition.")
+    
+    // Use the class parameters in Web.Client.Scripts to determine where in
+    // the queue a script definition will be placed. This determines where
+    // in the page a script will be rendered.
+    set:+$get(pagePosition)=0 pagePosition = 1
+    set:+$get(pagePosition)>5 pagePosition = 5
+    
+    // First, find the page position structure. The position structure is a
+    // simple array of hash-arrays (name->scriptDef pairs)
+    set structureAtPosition = ..scriptFilesQueue.get(pagePosition)
+    set:structureAtPosition="" structureAtPosition = ##class(EasyCSP.Core.Array).%New()
+    
+    quit:..hasScriptFileId(scriptId) 1 ; it's already there; don't duplicate
+    
+    set container = ##class(EasyCSP.Core.HashArray).%New()
+    do container.set(scriptId, scriptDef)
+    
+    do structureAtPosition.unshift(container)
+    
+    do ..scriptFilesQueue.set(pagePosition, structureAtPosition)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="queueFileOnTail">
+<Description>
+Insert a script definition into the queue at the end, moving all other
+definitions back one position.</Description>
+<FormalSpec>scriptId:%String="",scriptDef:%String="",pagePosition:%Integer=1</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // The script must be identified to avoid duplication
+    quit:$get(scriptId)="" $$$ERROR(1, "Script ID can not be empty.")
+    
+    // Use the class parameters in Web.Client.Scripts to determine where in
+    // the queue a script definition will be placed. This determines where
+    // in the page a script will be rendered.
+    set:+$get(pagePosition)=0 pagePosition = 1
+    set:+$get(pagePosition)>5 pagePosition = 5
+    
+    // First, find the page position structure. The position structure is a
+    // simple array of hash-arrays (name->scriptDef pairs)
+    set queue = ..scriptFilesQueue.get(pagePosition)
+    set:queue="" queue = ##class(EasyCSP.Core.Array).%New()
+    
+    quit:..hasScriptFileId( scriptId) 1 ; it's already there; don't duplicate
+    
+    set container = ##class(EasyCSP.Core.HashArray).%New()
+    do container.set(scriptId, scriptDef)
+    
+    do queue.append(container)
+    
+    //do ..debugDump(queue)
+    
+    do ..scriptFilesQueue.set(pagePosition, queue)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="registerCoreScript">
+<Description>
+Add a package to the queue for rendering.</Description>
+<FormalSpec>name:%String="",position:%Integer=1</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(name)="" 0 ; doesn't exist
+    
+    set:+$get(position)=0 position = 1
+    set:+$get(position)>5 position = 5
+    
+    if ..packages.isset(name) {
+        set package = ..packages.get(name)
+    } else {
+        quit 0 ; not a known core package name
+    }
+    
+    quit:..hasScriptFileId(name) 1 // already queued; don't duplicate
+        
+    set dep = package.get("depends")
+
+    if dep '= "" {
+        set depList = $listFromString(dep,",")
+        set ll = $listLength(depList)
+        for idx = 1:1:ll {
+            do ..registerCoreScript($listGet(depList,idx), position)
+        }
+    }
+    
+    set url = package.get("url") 
+    do ..queueFileOnTail(name, ..scriptFile(url), position)
+    set ..hasScripts = 1
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="registerScriptFile">
+<Description>
+Add a script definition to the queue. The "script" variable preferentially is
+a character stream but a string may also be passed in. This method will detect
+the difference and convert automatically to a stream. Note: output upon dequeue
+is always a stream.</Description>
+<FormalSpec>id:%String="",scriptFileLoc:%String,position:%String="",htmlOptions:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(id)=0 0
+    quit:$get(scriptFileLoc)="" 0
+    if $get(position) = "" set position = 5
+    
+    set ..hasScripts = 1 ; there is script text available
+    
+    set entry = ##class(EasyCSP.Core.HashArray).%New()
+    do entry.set(id, ..scriptFile("js/" _ scriptFileLoc, htmlOptions))
+    
+    do ..queueFileOnTail(id, entry, position)
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="renderScriptFiles">
+<Description>
+Dequeue scripts in the order they appear in the scriptQueue object.
+Get the script body from the definition and add it to the output stream.</Description>
+<FormalSpec>position:%Integer=0</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    
+    set:+$get(position)=0 position = ..#posHead
+    set:+$get(position)>5 position = ..#posEnd
+    
+    if '..scriptFilesQueue.isDefined(position) quit output
+    
+    //do ..debugDump("before ..dequeue for page position "_position)
+    //do ..debugDump(..scriptFilesQueue.get(position))
+    
+    quit ..dequeueFile(position)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

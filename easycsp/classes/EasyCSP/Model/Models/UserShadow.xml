@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:17">
+<Class name="EasyCSP.Model.Models.UserShadow">
+<Description><![CDATA[
+<p>
+Keep passwords and activations out of the user table
+</p>
+
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%Persistent,EasyCSP.Model.MVBase</Super>
+<TimeChanged>64147,39635.047951</TimeChanged>
+<TimeCreated>64123,65769.872092</TimeCreated>
+
+<Parameter name="MVFILENAME">
+<Default>USER.SHADOW</Default>
+</Parameter>
+
+<Parameter name="MVGLOBAL">
+<Type>%String</Type>
+<Default>USER.SHADOW</Default>
+</Parameter>
+
+<Parameter name="MVAUTOLOCK">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCLEARDICT">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCREATE">
+<Type>BOOLEAN</Type>
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="MVREPOPULATE">
+<Default>1</Default>
+</Parameter>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/   Each role includes all the privileges of the ones below it. Roles are in
+/   numeric levels. A controller uses the current viewer's role item in the
+/   user record and compares it to the required role level. If the user level
+/   "is as least as great" as the required level then access to the desired
+/   process is allowed.
+*/
+]]></Content>
+</UDLText>
+
+<Parameter name="roleGuest">
+<Description>
+A guest has zero privileges.</Description>
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="roleUser">
+<Description>
+Nearly all site users fall into the "user" role. A user can update their own demographic information
+and can read public documents.</Description>
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="roleReportOnly">
+<Description>
+A report-only user can do only what a typical user can but can also request/read some need-to-know
+reports. This would be your typical line supervisor, ticket agents, process control managers, etc.</Description>
+<Default>50</Default>
+</Parameter>
+
+<Parameter name="roleAgent">
+<Description>
+An agent is allowed to make small adjustments to ledgers, can issue credits or refunds on a limited basis.</Description>
+<Default>75</Default>
+</Parameter>
+
+<Parameter name="roleSupervisor">
+<Description>
+A supervisor can modify user records for those under their charge.</Description>
+<Default>100</Default>
+</Parameter>
+
+<Parameter name="roleCorporateDBA">
+<Description>
+A corporate DBA can modify user records and data in various tables their company owns. A corporate
+DBA still can only see records that belong to their own company.</Description>
+<Default>1000</Default>
+</Parameter>
+
+<Parameter name="roleSiteDBA">
+<Description>
+A site DBA can modify records for any company.</Description>
+<Default>100000</Default>
+</Parameter>
+
+<Property name="userShadowId">
+<Type>%String</Type>
+<SqlFieldName>user_shadow_id</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="0"/>
+<Parameter name="MVNAME" value="USER_SHADOW_ID"/>
+</Property>
+
+<UDLText name="T">
+<Content><![CDATA[
+// 
+
+]]></Content>
+</UDLText>
+
+<Property name="password">
+<Description>
+The password for the account</Description>
+<Type>%String</Type>
+<Required>1</Required>
+<SqlFieldName>password</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="1"/>
+<Parameter name="MVHEADING" value="Password"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="PASSWORD"/>
+<Parameter name="MVWIDTH" value="32"/>
+</Property>
+
+<Property name="activationKey">
+<Description>
+If the user must activate the account via clicking on a link in a email, the email key must match this value.</Description>
+<Type>%String</Type>
+<SqlFieldName>activation_key</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="2"/>
+<Parameter name="MVHEADING" value="Activation Key"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="Activation Key"/>
+<Parameter name="MVWIDTH" value="32"/>
+</Property>
+
+<Property name="status">
+<Description>
+Account status.</Description>
+<Type>%String</Type>
+<Required>1</Required>
+<SqlFieldName>status</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="3"/>
+<Parameter name="MVHEADING" value="Status"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="Status"/>
+<Parameter name="MVWIDTH" value="10"/>
+</Property>
+
+<Property name="lastGoodLoginDate">
+<Description>
+The epoch time when the user last logged in successfully. Failed login datetimes are cleared on a successful login.</Description>
+<Type>%BigInt</Type>
+<SqlFieldName>last_good_login_date</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="4"/>
+<Parameter name="MVHEADING" value="Last Good Login"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVNAME" value="LAST_GOOD_LOGIN_DATE"/>
+<Parameter name="MVWIDTH" value="32"/>
+</Property>
+
+<Property name="lastGoodLogin">
+<Description>
+The I-Type for the last good login date. This is a calculated property, not used in models.</Description>
+<Type>%String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {lastGoodLogin}=##class(EasyCSP.Model.Models.UserShadow).posixDateToExternal({%RECORD}, 4, "D")</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,LAST_GOOD_LOGIN_DATE, &apos;D&apos;)"/>
+<Parameter name="MVNAME" value="LAST_GOOD_LOGIN"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVTYPE" value="I"/>
+</Property>
+
+<Property name="lastFailedLoginDate">
+<Description>
+The last datetime when a user attempted a login and failed. Accounts are suspended when the limit of tries has been reached. The suspension is temporary.</Description>
+<Type>%BigInt</Type>
+<SqlFieldName>last_failed_login_date</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="5"/>
+<Parameter name="MVHEADING" value="Last Good Login"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVNAME" value="LAST_FAILED_LOGIN_DATE"/>
+<Parameter name="MVWIDTH" value="32"/>
+</Property>
+
+<Property name="lastFailedLogin">
+<Description>
+The I-Type for the last failed login dated. This is a calculated property, not used in models.</Description>
+<Type>%String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {lastFailedLogin}=##class(EasyCSP.Model.Models.UserShadow).posixDateToExternal({%RECORD}, 5,"")</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,LAST_FAILED_LOGIN_DATE, &apos;&apos;)"/>
+<Parameter name="MVNAME" value="LAST_FAILED_LOGIN"/>
+<Parameter name="MVPROJECTED" value="0"/>
+<Parameter name="MVTYPE" value="I"/>
+</Property>
+
+<Property name="attemptsSinceLastGoodLogin">
+<Description>
+Successive failed logins are counted here. If the speed limit time has passed then this value will be ignored.</Description>
+<Type>%Integer</Type>
+<SqlFieldName>attempts_since_last_good_login</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="6"/>
+<Parameter name="MVHEADING" value="Attempts Since Last Good Login"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVNAME" value="ATTEMPTS_SINCE_LAST_GOOD_LOGIN"/>
+<Parameter name="MVWIDTH" value="10"/>
+</Property>
+
+<Property name="softSuspendUntilDate">
+<Description>
+The epoch datetime when a suspension for failed logins will be lifted.</Description>
+<Type>%BigInt</Type>
+<SqlFieldName>soft_suspend_until_date</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="7"/>
+<Parameter name="MVHEADING" value="Soft Suspend Until"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVNAME" value="SOFT_SUSPEND_UNTIL_DATE"/>
+<Parameter name="MVWIDTH" value="32"/>
+</Property>
+
+<Property name="softSuspendUntil">
+<Description>
+The I-Type for the soft-suspend datetime. This is a calculated property, not used in models.</Description>
+<Type>%String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {softSuspendUntil}=##class(EasyCSP.Model.Models.UserShadow).posixDateToExternal({%RECORD}, 7, "")</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVHEADING" value="Soft Suspend Until"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,SOFT_SUSPEND_UNTIL_DATE, &apos;&apos;)"/>
+<Parameter name="MVNAME" value="SOFT_SUSPEND_UNTIL"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVTYPE" value="I"/>
+</Property>
+
+<Property name="currentSessionId">
+<Description>
+Session tracking.</Description>
+<Type>%String</Type>
+<SqlFieldName>session_id</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="8"/>
+<Parameter name="MVHEADING" value="Current Session Id"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="SESSION_ID"/>
+</Property>
+
+<Property name="privateKey">
+<Description><![CDATA[
+The user's private key against which personal data will be encrypted. The system computes this when an account is created. <i>Do not change this value!</i>]]></Description>
+<Type>%String</Type>
+<SqlFieldName>private_key</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="9"/>
+<Parameter name="MVHEADING" value="Private Key"/>
+<Parameter name="MVJUSTIFICATION" value="T"/>
+<Parameter name="MVNAME" value="PRIVATE_KEY"/>
+<Parameter name="MVPROJECTED" value="1"/>
+</Property>
+
+<Property name="role">
+<Type>%Integer</Type>
+<SqlFieldName>role</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="10"/>
+<Parameter name="MVHEADING" value="Role"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVNAME" value="ROLE"/>
+<Parameter name="MVPROJECTED" value="1"/>
+</Property>
+
+<Index name="indexUserShadowIdIndex">
+<IdKey>1</IdKey>
+<PrimaryKey>1</PrimaryKey>
+<Properties>userShadowId</Properties>
+</Index>
+
+<Parameter name="statusNew">
+<Default>NEW</Default>
+</Parameter>
+
+<Parameter name="statusActive">
+<Default>ACTIVE</Default>
+</Parameter>
+
+<Parameter name="statusSuspended">
+<Default>SUSPENDED</Default>
+</Parameter>
+
+<Parameter name="statusBanned">
+<Default>BANNED</Default>
+</Parameter>
+
+<Parameter name="statusInactive">
+<Default>INACTIVE</Default>
+</Parameter>
+
+<Method name="validationRules">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    do ..addValidationRule("usershadow_password", "Password")
+    set atb = ..getAttribute("usershadow_status")
+    set atb.valueList = ##class(EasyCSP.Core.Array).%New()
+    do atb.valueList.split("NEW,ACTIVE,SUSPENDED,BANNED,INACTIVE")
+    do ..setAttribute(atb)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="posixDateToExternal">
+<Description>
+Dates are stored as an integer value in the standard POSIX epoch. This function
+converts the internal POSIX date to an external representation.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>Item:%String,attribute:%Integer,option:%String</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    @RECORD=Item
+    passParameters = "EasyCSP.Core.HashArray"->%New()
+    passParameters->set("value", @record<attribute>)
+    passParameters->set("options", option)
+    return "EasyCSP.Core.Component"->runComponent("UDate", "converter", 1, passParameters)
+    *RETURN "EasyCSP.Converter.Converters.UDate"->run(@RECORD<attribute>, $get(option))
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^USER.SHADOW</DataLocation>
+<DefaultData>UserShadowDefaultData</DefaultData>
+<IdLocation>^C.USER.SHADOW</IdLocation>
+<IndexLocation>^I.USER.SHADOW</IndexLocation>
+<StreamLocation>^S.USER.SHADOW</StreamLocation>
+<Data name="UserShadowDefaultData">
+<Value name="1">
+<Value>password</Value>
+</Value>
+<Value name="2">
+<Value>activationKey</Value>
+</Value>
+<Value name="3">
+<Value>status</Value>
+</Value>
+<Value name="4">
+<Value>lastGoodLoginDate</Value>
+</Value>
+<Value name="5">
+<Value>lastFailedLoginDate</Value>
+</Value>
+<Value name="6">
+<Value>attemptsSinceLastGoodLogin</Value>
+</Value>
+<Value name="7">
+<Value>softSuspendUntilDate</Value>
+</Value>
+<Value name="8">
+<Value>currentSessionId</Value>
+</Value>
+<Value name="9">
+<Value>privateKey</Value>
+</Value>
+<Value name="10">
+<Value>role</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+</Export>

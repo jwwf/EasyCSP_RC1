@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:38">
+<Class name="EasyCSP.Web.Client.ScriptQueue">
+<Description>
+A structure for storing requests for javascript output in a specified output order.</Description>
+<Abstract>1</Abstract>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64140,67294.777912</TimeChanged>
+<TimeCreated>64120,28910.009107</TimeCreated>
+
+<Property name="scriptQueue">
+<Description><![CDATA[
+Queue(page_position, request_order, script_id=>script_def)]]></Description>
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Method name="%OnNew">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[    set ..scriptQueue = ##class(EasyCSP.Core.Array).%New()
+]]></Implementation>
+</Method>
+
+<Method name="dequeue">
+<FormalSpec>pagePosition:%Integer=0</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    set:+$get(pagePosition)=0 pagePosition = 1
+    set:+$get(pagePosition)>5 pagePosition = 5
+    
+    set requests = ..scriptQueue.get(pagePosition) ; get the array of requests
+    quit:requests="" output
+    
+    s $zt = "error"
+    
+    set requestKey = requests.Next()
+    
+    while requestKey '= "" {
+        set element = requests.get(requestKey)
+        set scriptDef = element.get(element.Next()) ; get the scriptDef at this key
+        do:scriptDef.addTags output.WriteLine("<script type=""text/javascript"">")
+        do output.CopyFrom(scriptDef.scriptText)
+        do:scriptDef.addTags output.WriteLine("</script>")
+        set requestKey = requests.Next(requestKey)
+    }
+    
+    do requests.clear()
+    
+    do ..scriptQueue.set(pagePosition, requests)
+    
+    quit output
+
+error
+    s $zt = ""
+    Write "error in request id ",requestKey,!
+    d ..debugDump(requests)
+    quit output
+]]></Implementation>
+</Method>
+
+<Method name="hasScriptId">
+<Description>
+"structure" is a core array containing script definitions in
+the order in which they were added.</Description>
+<FormalSpec>structure:EasyCSP.Core.Array="",scriptId:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(structure)'["Array" 0
+    quit:$get(scriptId)="" 0
+    
+    set found = 0
+    set key = structure.Next()
+    while key '= "" {
+        set scriptKey = structure.get(key)
+        set scriptIdAtKey = scriptKey.Next()
+        if scriptKey = scriptIdAtKey {
+            set found = 1
+            quit
+        }
+        set key = structure.Next(key)
+    }
+    
+    quit found
+]]></Implementation>
+</Method>
+
+<Method name="queueOnHead">
+<Description>
+Insert a script definition into the queue at the start, moving all other
+definitions back one position.</Description>
+<FormalSpec>scriptId:%String="",scriptDef:EasyCSP.Web.Client.ScriptDefinition="",pagePosition:%Integer=1</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // The script must be identified to avoid duplication
+    quit:$get(scriptId)="" $$$ERROR(1, "Script ID can not be empty.")
+    
+    // The script must be contained in a valid definition object
+    quit:$get(scriptDef)'["ScriptDefinition" $$$ERROR(2, "Script definition is not an instance of EasyCSP.Web.Client.ScriptDefinition.")
+    
+    // Use the class parameters in Web.Client.Scripts to determine where in
+    // the queue a script definition will be placed. This determines where
+    // in the page a script will be rendered.
+    set:+$get(pagePosition)=0 pagePosition = 1
+    set:+$get(pagePosition)>5 pagePosition = 5
+    
+    // First, find the page position structure. The position structure is a
+    // simple array of hash-arrays (name->scriptDef pairs)
+    set structureAtPosition = ..scriptQueue.get(pagePosition)
+    set:structureAtPosition="" structureAtPosition = ##class(EasyCSP.Core.Array).%New()
+    
+    quit:..hasScriptId(structureAtPosition, scriptId) 1 ; it's already there; don't duplicate
+    
+    set container = ##class(EasyCSP.Core.HashArray).%New()
+    do container.set(scriptId, scriptDef)
+    
+    do structureAtPosition.unshift(container)
+    
+    do ..scriptQueue.set(pagePosition, structureAtPosition)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="queueOnTail">
+<Description>
+Insert a script definition into the queue at the end, moving all other
+definitions back one position.</Description>
+<FormalSpec>scriptId:%String="",scriptDef:EasyCSP.Web.Client.ScriptDefinition="",pagePosition:%Integer=1</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // The script must be identified to avoid duplication
+    quit:$get(scriptId)="" $$$ERROR(1, "Script ID can not be empty.")
+    
+    // The script must be contained in a valid definition object
+    quit:$get(scriptDef)'["ScriptDefinition" $$$ERROR(2, "Script definition is not an instance of EasyCSP.Web.Client.ScriptDefinition.")
+    
+    // Use the class parameters in Web.Client.Scripts to determine where in
+    // the queue a script definition will be placed. This determines where
+    // in the page a script will be rendered.
+    set:+$get(pagePosition)=0 pagePosition = 1
+    set:+$get(pagePosition)>5 pagePosition = 5
+    
+    // First, find the page position structure. The position structure is a
+    // simple array of hash-arrays (name->scriptDef pairs)
+    set structureAtPosition = ..scriptQueue.get(pagePosition)
+    set:structureAtPosition="" structureAtPosition = ##class(EasyCSP.Core.Array).%New()
+    
+    quit:..hasScriptId(structureAtPosition, scriptId) 1 ; it's already there; don't duplicate
+    
+    set container = ##class(EasyCSP.Core.HashArray).%New()
+    do container.set(scriptId, scriptDef)
+    
+    do structureAtPosition.append(container)
+    
+    do ..scriptQueue.set(pagePosition, structureAtPosition)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="registerScript">
+<Description>
+Add a script definition to the queue. The "script" variable preferentially is
+a character stream but a string may also be passed in. This method will detect
+the difference and convert automatically to a stream. Note: output upon dequeue
+is always a stream.</Description>
+<FormalSpec>id:%String="",script:%GlobalCharacterStream,position:%String="",addTags:%Boolean=1</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(position) = "" set position = 5
+    
+    // Detect whether the input script is in a stream or a string. If
+    // it's a string, convert to a stream here.
+    if '$isobject(script),$get(script)'="" {
+        set temp = script
+        set script = ##class(%GlobalCharacterStream).%New()
+        do script.WriteLine(temp)
+    }
+    
+    set ..hasScripts = 1 ; there is script text available
+    
+    set scriptDef = ##class(EasyCSP.Web.Client.ScriptDefinition).%New()
+    set scriptDef.id = id
+    set scriptDef.addTags = +$get(addTags)
+    
+    do scriptDef.scriptText.CopyFrom(script)
+    
+    do ..queueOnTail(id, scriptDef, position)
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="renderScripts">
+<Description>
+Dequeue scripts in the order they appear in the scriptQueue object.
+Get the script body from the definition and add it to the output stream.</Description>
+<FormalSpec>position:%Integer=0</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    
+    set:+$get(position)=0 position = ..#posHead
+    set:+$get(position)>5 position = ..#posEnd
+    
+    if '..scriptQueue.isDefined(position) quit output
+    
+    quit ..dequeue(position)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

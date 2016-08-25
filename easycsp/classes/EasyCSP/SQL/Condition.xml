@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:24">
+<Class name="EasyCSP.SQL.Condition">
+<Description><![CDATA[
+<p>
+Define a condition for selection. The real SQL column name must be used
+since this class doesn't have access to the query builder properties.
+The comparitor must be a valid SQL comparitor, like "=", "<>", etc.
+The comparison value may be empty.
+</p>
+
+<p>
+If the partial match indicator is set then the comparitor is ignored and
+"LIKE" is used with wildcard characters surrounding the value.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>64144,64238.229066</TimeChanged>
+<TimeCreated>63763,33873.599054</TimeCreated>
+
+<Property name="column">
+<Type>%String</Type>
+</Property>
+
+<Property name="comparitor">
+<Type>%String</Type>
+<InitialExpression>"="</InitialExpression>
+</Property>
+
+<Property name="partialMatch">
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="value">
+<Type>%String</Type>
+</Property>
+
+<Method name="%OnNew">
+<FormalSpec>column:%String="",comparitor:%String="=",value:%String="",partialMatch:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    if $get(column) = "" {
+        throw ##class(EasyCSP.Core.Exception).%New("new sql condition",500,"","Specify a table column to compare.")
+    }
+    
+    if $get(comparitor) = "" set comparitor = "="
+    
+    if $get(value) = "" set value = "" ; avoid uninitialized variable error
+    
+    if +$get(partialMatch) '= 1 set partialMatch = 0
+    
+    set ..column = column
+    set ..comparitor = comparitor
+    set ..value = value
+    set ..partialMatch = +partialMatch
+    
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="toString">
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if $mvoconv(..comparitor, "MCL") = "like" {
+        return ..column _ " LIKE '" _ ..value _ "'"
+    } else {
+        return ..column _ " " _ ..comparitor _ "'" _ ..value _ "'"
+    }
+]]></Implementation>
+</Method>
+</Class>
+</Export>

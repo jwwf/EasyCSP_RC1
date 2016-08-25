@@ -1,0 +1,750 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:39">
+<Class name="EasyCSP.Web.Widget.ActiveTable">
+<Description><![CDATA[
+<p>
+Using a query result in ^queryOut(<i>pid</i>), create a table with the
+listed column names and data contents. The <variable>options</variable> formal
+spec parameter is optional but if it is supplied it is an instance of a
+Core.HashArray. Options recognized include:
+<ul>
+<li>tableId - the DOM/CSS id of the table. Defaults to "activeTable"</li>
+<li>tableClass - the CSS class to use for the table object. This defaults to "activeTable" in the stock CSS.</li>
+<li>tableHeaderRowClass</li> - the CSS class to use for the table header row. This defaults to "activeTableHeader" in the stock CSS.</li>
+<li>evenColClass - the CSS class to use for even rows. This defaults to "". This is provided as an override to the stock CSS.</li>
+<li>oddColClass - the CSS class to use for odd rows. This defaults to "". This is provided as an override to the stock CSS.</li>
+<li>pageNumber - the current page number. This should be set by the script upon paging.</li>
+<li>pageSize - the depth of the table in rows. Paging is performed through scripting and AJAX</li>
+<li>queryId - the leftmost subnode of ^queryOut. This is used to locate the query results and is incorporated into the table id.</li>
+<li>buttonColumn - a Core.HashArray with the configuration of the buttons to create. The default is to use
+    the stock "view, update, delete" set of buttons. See <class>EasyCSP.Web.Widgets.ButtonColumn</class> for configuration details.
+    If this node contains the string "none" then no button column will be produced.</li>
+</ul>
+
+<p>Property <property>evenRowClass</property> is the CSS class to use for even rows. This defaults to "evenRow" in the stock CSS.</p>
+<p>Property <property>oddRowClass</property> is the CSS class to use for odd rows. This defaults to "oddRow" in the stock CSS.</p>
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64146,48718.735409</TimeChanged>
+<TimeCreated>63752,62447.598514</TimeCreated>
+
+<Parameter name="evenColClass">
+<Type>%String</Type>
+</Parameter>
+
+<Parameter name="oddColClass">
+<Type>%String</Type>
+</Parameter>
+
+<Parameter name="tableClass">
+<Type>%String</Type>
+<Default>activeTable</Default>
+</Parameter>
+
+<Parameter name="tableHeaderRowClass">
+<Type>%String</Type>
+<Default>activeTableHeader</Default>
+</Parameter>
+
+<Parameter name="pageSize">
+<Type>%Integer</Type>
+<Default>10</Default>
+</Parameter>
+
+<Property name="evenRowClass">
+<Type>%String</Type>
+<InitialExpression>"evenTableRow"</InitialExpression>
+</Property>
+
+<Property name="oddRowClass">
+<Type>%String</Type>
+<InitialExpression>"oddTableRow"</InitialExpression>
+</Property>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/ These properties are set on New
+*/
+]]></Content>
+</UDLText>
+
+<Property name="buttonOptions">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="columnOptions">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="compiling">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="controllerId">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="headerOptions">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="imageUrl">
+<Type>%String</Type>
+</Property>
+
+<Property name="isAjax">
+<Type>%Boolean</Type>
+</Property>
+
+<Property name="loadingHTML">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="maxRow">
+<Type>%Integer</Type>
+</Property>
+
+<Property name="navigationDivId">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="navNext">
+<Type>%String</Type>
+</Property>
+
+<Property name="navPrevious">
+<Type>%String</Type>
+</Property>
+
+<Property name="options">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="pageNumber">
+<Type>%Integer</Type>
+</Property>
+
+<Property name="pageSize">
+<Type>%Integer</Type>
+</Property>
+
+<Property name="queryId">
+<Type>%String</Type>
+</Property>
+
+<Property name="queryStatus">
+<Type>%String</Type>
+</Property>
+
+<Property name="rowCount">
+<Type>%Integer</Type>
+</Property>
+
+<Property name="rowOptions">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="startRow">
+<Type>%Integer</Type>
+</Property>
+
+<Property name="statusDivId">
+<Type>%String</Type>
+</Property>
+
+<Property name="tableDivId">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="tableId">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="tableOptions">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="totalPages">
+<Type>%String</Type>
+</Property>
+
+<Property name="url">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="widgetDiv">
+<Type>%String</Type>
+</Property>
+
+<Property name="widgetDivId">
+<Type>%String</Type>
+</Property>
+
+<Method name="afterConstruct">
+<Description>
+Initialize the table server-side object.</Description>
+<FormalSpec>options:EasyCSP.Core.HashArray</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+        
+    if $get(options)="" set options = ##class(EasyCSP.Core.HashArray).%New()
+    set ..options = options
+    
+    set ..isAjax = %EasyCSPApp.controller.isAjax
+        
+    set ..url = %EasyCSPApp.getViewURL()
+    set ..imageUrl = %EasyCSPApp.getImageUrl(1)_"gridview/"
+    
+    //set ..queryId = ..options.get("queryId")
+    set ..queryId = %EasyCSPApp.getRequestData("queryId")
+    set:..queryId="" ..queryId = ..data.get("queryId")
+
+    quit:..queryId="" 0
+    
+    // Let JQuery know which controller is using the table widget. This allows
+    // the action buttons to construct URLs that lead back to the controller,
+    // not the widget.
+    set ..controllerId = $get(^queryOut(..queryId, "controller")) ; %EasyCSPApp.controller.id
+    
+    set ..pageNumber = +%EasyCSPApp.getRequestData("pageNumber")
+    set:+..pageNumber=0 ..pageNumber = 1
+    
+    // Look in the options array first for the page size, then the system configuration, then if all else fails use the class default.
+    set ..pageSize = +##class(EasyCSP.Configuration.Settings).getSetting("gridPageSize")
+    set:..pageSize=0 ..pageSize = ..#pageSize
+        
+    set ..startRow = ((..pageNumber - 1) * ..pageSize) + 1
+    
+    // There's no sense in doing the formatting setup and tapdance if the query has run but
+    // produced no records.
+    set ..rowCount = +$get(^queryOut(..queryId, "rowCount"))
+    set ..queryStatus = $get(^queryOut(..queryId, "status"))
+    
+    set ..totalPages = (..rowCount \ ..pageSize) + ((..rowCount # ..pageSize) > 0)
+    set:..totalPages<1 totalPages = 1
+    
+    if (..startRow + ..pageSize+1) > ..rowCount {
+        set ..maxRow = ..rowCount
+    } else {
+        set ..maxRow = (..startRow + ..pageSize) - 1
+    }
+    
+    set ..tableId = ..fixId("activeTable"_"_"_..queryId)
+    
+    set ..tableDivId = ..tableId _ "_activeTable_div"
+    
+    set ..navigationDivId = ..tableId _ "_activeTable_nav_div"
+    
+    set ..loadingHTML = "<center><div id="""_..tableId_"-loading"">" _
+        "<p>Loading...</p>"_
+        ..image(..imageUrl_"loading.gif", "Loading...")_
+        "</div></center>"
+    
+    // Make empty, placeholder divs. JQuery will need these for anchors. The
+    // main page layout will need these initially then JQuery will leverage
+    // these areas on document.ready().
+    set divOptions = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // widget div tags
+    set ..widgetDivId = ..tableId_"_widgetDiv"
+    do divOptions.set("id", ..widgetDivId)
+    set ..widgetDiv = ..tag("div", divOptions, "", 0) _ ..crlf
+    
+    set ..statusDivId = ..tableId_"_statusDisplay"
+    
+    // first inner div: the status
+    do divOptions.set("id", ..statusDivId)
+    set ..widgetDiv = ..widgetDiv _ ..tag("div", divOptions, "", 0) _ "</div>" _ ..crlf
+    
+    // second inner div: the grid
+    do divOptions.set("id", ..tableDivId)
+    set ..widgetDiv = ..widgetDiv _ ..tag("div", divOptions, "", 0) _ 
+        ..loadingHTML _
+        "</div>" _ ..crlf
+    
+    // third inner div: the navigation
+    set ..navNext =  ..tableId_"_nav_next"
+    set ..navPrevious = ..tableId_"_nav_previous"
+    do divOptions.set("id", ..navigationDivId)
+    set ..widgetDiv = ..widgetDiv _ ..stringFromStream( ..widgetNavigationHTML()) _ ..crlf
+    
+    // close the outer div
+    set ..widgetDiv = ..widgetDiv _ "</div>" _ ..crlf
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+// Call this method after %New() to build the entire page content. This creates
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// the divs and fills them. On document.ready() the entire page is self-sufficient
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// by dint of JQuery scripting. Note: the scripting is also built and output at this time.
+
+]]></Content>
+</UDLText>
+
+<Method name="buildAll">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+    set fullContent = ##class(%GlobalCharacterStream).%New() // ..stream is cleared on each call to support AJAX
+    
+    // Build the HTML for the status div
+    do ..widgetStatusHTML()
+    do fullContent.CopyFrom(..stream)
+    
+    do ..widgetTableHTML()
+    do fullContent.CopyFrom(..stream)
+    
+    // Build the HTML for the scrolling through pages
+    do ..widgetNavigationHTML()
+    do fullContent.CopyFrom(..stream)
+    
+    // Construct and output the scripting
+    do ..scriptJS()
+    do fullContent.CopyFrom(..stream)
+    
+    quit fullContent
+]]></Implementation>
+</Method>
+
+<Method name="fixId">
+<FormalSpec>id:%String</FormalSpec>
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    dontUse = "!@#$%^&*()-+={}[]|\<>?/.,:;"
+    convertTo = str("_",len(dontUse))
+    convert dontUse to convertTo in id
+    return trim(id,"_")
+]]></Implementation>
+</Method>
+
+<Method name="formatCell">
+<Description>
+Right justify numbers. Allow overriding the class-wide parameter for exceptions</Description>
+<FormalSpec>datum:%String="",justifyNumbers:%Boolean=1</FormalSpec>
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    test = convert("$,.", "", datum)
+    if $get(justifyNumbers) = "" then justifyNumbers = 1
+    
+    class = ""
+    if test = oconv(test, 'MCN') Then
+        class = ' style="text-align: right;"'
+    end
+    
+    return "<td":class:">":datum:"</td>"
+]]></Implementation>
+</Method>
+
+<Method name="formatColHeaders">
+<Description>
+Prettyprint column headers</Description>
+<FormalSpec>colHeaders:EasyCSP.Core.Array,headerOptions:EasyCSP.Core.HashArray=""</FormalSpec>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if $get(headerOptions) = "" {
+        set headerOptions = ##class(EasyCSP.Core.HashArray).%New()
+        do headerOptions.set("class", ..%GetParameter("tableHeaderRowClass"))
+    }
+    
+    if headerOptions.get("class") = "" do headerOptions.set("class", ..%GetParameter("tableHeaderRowClass"))
+    
+    do headerOptions.unset("tableHeaderRowClass")
+    
+    if +headerOptions.get("buttons") '= 0 do colHeaders.append("Actions")
+    
+    set numberOfColHeaders = colHeaders.length()
+    
+    set tr = ..tag("tr", headerOptions, "", 0) ; *"<tr>"
+    
+    for Idx = 1:1:numberOfColHeaders {
+
+        set th = ..tag("th", headerOptions, colHeaders.get(Idx))
+    
+        set tr = tr_th
+        
+    }
+    
+    do ..addContent(tr)
+    
+    do ..closeTag("tr")
+]]></Implementation>
+</Method>
+
+<Method name="pageSetup">
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    do ..scriptJS()
+    quit ..widgetDiv
+]]></Implementation>
+</Method>
+
+<Method name="widgetNavigationHTML">
+<Description>
+Pick through the status properties in this class then format
+the values for web display.
+</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    do ..stream.Clear()
+    
+    set divOptions = ##class(EasyCSP.Core.HashArray).%New()
+    do divOptions.set("id", ..navigationDivId)
+    do ..openTag("div", divOptions)
+    set divOptions = ""
+    
+    set arrowDown = ..image(..imageUrl_"down.gif", "Next Page")
+    set arrowUp = ..image(..imageUrl_"up.gif", "Previous Page")
+    
+    set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // Enclosure
+    do htmlOptions.set("class", "inline row")
+    do htmlOptions.set("style", "width: 100%; list-style-type: none;")
+    do ..openTag("ul", htmlOptions)
+    
+    do htmlOptions.unsetAll()
+    
+    // Previous page
+    do htmlOptions.set("id", ..navPrevious)
+    do htmlOptions.set("class", "fleft scroller")
+    //if ..pageNumber <= 1 {
+        //do htmlOptions.set("style", "border: groove gray")
+    //}
+    
+    do htmlOptions.set("onclick", "click_previous();")
+    
+    do ..addContent(..tag("li", htmlOptions, arrowUp _ " Previous Page", 1))
+    
+    // Next page
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("id", ..navNext)
+    do htmlOptions.set("class", "fright scroller")
+    //if ..pageNumber >= ..totalPages {
+        //do htmlOptions.set("style", "border: groove gray")
+    //}
+    
+    
+    do htmlOptions.set("onclick", "click_next();")
+    do ..addContent(..tag("li", htmlOptions, arrowDown _ " Next Page", 1))
+    
+    do ..closeTag("ul")
+    
+    do:'..isAjax ..closeTag("div")
+    
+    do ..stream.Rewind()
+    
+    quit ..stream
+]]></Implementation>
+</Method>
+
+<Method name="scriptJS">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    
+    do ..stream.Clear()
+    
+    set scriptParms = ##class(EasyCSP.Core.HashArray).%New()
+    do scriptParms.set("entryPoint",%EasyCSPApp.getAppUrl())
+    do scriptParms.set("queryId", ..queryId)
+
+    set outputStream = ##class(EasyCSP.Web.Client.DynamicScript).run("activeButtons.js", scriptParms)
+    
+    do %EasyCSPApp.controller.layout.scripting.registerScript("buttonscript", outputStream, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
+    
+    set stat = ..statusArray()
+    
+    do scriptParms.set("stat", stat)
+    do scriptParms.copyFrom(stat)
+
+    set outputStream = ##class(EasyCSP.Web.Client.DynamicScript).run("activeTableLoading.js", scriptParms)
+    
+    do %EasyCSPApp.controller.layout.scripting.registerScript("activeTableAjax", outputStream, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
+    
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="statusArray">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[
+    set stat = ##class(EasyCSP.Core.HashArray).%New()
+    do stat.set("loadingHTML", ..loadingHTML)
+    do stat.set("maxRow", ..maxRow)
+    do stat.set("navNext", ..navNext)
+    do stat.set("navPrevious", ..navPrevious)
+    do stat.set("queryStatus", ..queryStatus)
+    //do stat.set("rowCount", ..rowCount)
+    do stat.set("pageNumber", ..pageNumber)
+    do stat.set("pageSize", ..pageSize)
+    do stat.set("statusDivId", ..statusDivId)
+    do stat.set("tableDivId", ..tableDivId)
+    do stat.set("tableId", ..tableId)
+    do stat.set("totalPages", ..totalPages)
+    //do stat.set("widgetDivId", ..widgetDivId)
+    
+    quit stat
+]]></Implementation>
+</Method>
+
+<Method name="widgetStatusHTML">
+<Description>
+
+If the query is still running in the background
+reveal the spinning "loading" gif. The scripting allows the user to click on
+the gif to stop the query before it reaches the max limit of rows returned. A
+query stops when the amount of rows processed for output meets the maxRowsReturned
+value in the framework settings table. The display will look something
+like this:
+
+Status: Complete | 17 records retrieved | Page 2 of 2
+Rows 11 to 20 of 17
+--or--
+Status: Compiling [*] | 17 records retrieved | Page 2 of 2
+Rows 11 to 20 of 17
+
+where "[*]" stands for an animated "loading" gif.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set displayStatus = "" ; prepare for optional content
+    
+    // Only output the div wrapper if this is an initial drawing
+    if '..isAjax {
+        set divOptions = ##class(EasyCSP.Core.HashArray).%New()
+        do divOptions.set("id", ..statusDivId)
+        do ..addContent(..tag("div", divOptions))
+    }
+    
+    // The first line: query status. 
+    
+    do ..addContent("Status: "_..queryStatus)
+    
+    set displayStatusImageOptions = ##class(EasyCSP.Core.HashArray).%New()
+    do displayStatusImageOptions.set("id", ..tableId_"_stop_query")
+    
+    // Hide the gif if the query is complete.
+    if ..queryStatus = "Complete" {
+        do displayStatusImageOptions.set("style", "visibility: hidden")
+    }
+    
+    set ..compiling = ..image(..imageUrl_"loading-sm.gif", "Query is running in the background. Click to stop.", displayStatusImageOptions)
+    
+    do ..addContent(" " _ ..compiling)
+    
+    do ..addContent(" | " _ ..rowCount _ " records retrieved")
+    do ..addContent(" | Page "_..pageNumber_" of "_..totalPages)
+    
+    do ..addContent("<br />Rows "_..startRow_" to "_..maxRow_" of "_..rowCount)
+    
+    do:'..isAjax ..closeTag("div")
+    
+    quit ..stream
+]]></Implementation>
+</Method>
+
+<Method name="widgetStatusJSON">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    do ..stream.Clear()
+    set stat = ..statusArray()
+    do ..addContent(stat.toJSON())
+    quit ..stream
+]]></Implementation>
+</Method>
+
+<Method name="widgetTableHTML">
+<Description>
+Create an active table with "pagesize" rows. Paging is done with a script that</Description>
+<FormalSpec>options:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+
+    do ..stream.Clear()
+    
+    // Wrapper this whole section in an identified div. One of three things may
+    // visually appear here: 
+    // (1) a paragraph indicating there were no records;
+    // (2) a "Loading" graphic if the query isn't complete but no records are yet available;
+    // or (3) a table of {maxrows} showing a slice of records from the query results.
+    if ..rowCount=0 {
+        if ..queryStatus = "Complete" {
+           do ..addContent( "<p>No data to report</p>")
+        } else {
+            do ..addContent(..loadingHTML)
+        }
+        do ..closeTag("div") // end the div because nothing else can go here.
+        quit ..stream
+    }
+        
+    set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set buttons = ##class(EasyCSP.Web.Widget.ButtonColumn).%New()
+    set buttonOptions = options.get("buttons")
+    if ($get(buttonOptions)="") & ($get(^queryOut(..queryId, "buttons")) '= "") {
+        
+        set buttonJSON = $get(^queryOut(..queryId, "buttons"))
+        set parser = ##class(EasyCSP.Rendering.json).%New()
+        set str = ##class(%GlobalCharacterStream).%New()
+        do str.Write(buttonJSON)
+        set buttonWrapper = parser.run(str)
+        set buttonOptions = buttonWrapper.get("buttons")
+    } else {
+        set buttonOptions = buttons.defaultButtons()
+    }
+    
+    // Open the table tag. Affix the id to the table id so the query can be located on paging.
+    do htmlOptions.set("id", ..tableId)
+    do htmlOptions.set("class", "activeTable")
+    do ..addContent(..tag("table", htmlOptions, "", 0))
+    
+    do ..openTag("thead")
+    
+    //
+    // Blort out a row of column headings
+    //
+    
+    set doButtons = 1
+    set colHeadersString = $get(^queryOut(..queryId, "columnLabels"))
+    set colHeaders = ##class(EasyCSP.Core.Array).%New()
+    do colHeaders.split(colHeadersString)
+    set numberOfColumns = colHeaders.length()
+    
+    set colIds = $get(^queryOut(..queryId, "columns"))
+    set idColumn = $get(^queryOut(..queryId, "idColumn"))
+    set idColumnLabel = $get(^queryOut(..queryId, "idColumnLabel"))
+    if idColumn = "" {
+        set doButtons = 0
+    }
+   
+    if $mvoconv($get(buttonOptions), "MCL") '= "none"
+    {
+        do ..headerOptions.set("buttons", 1)
+    } else {
+        do ..headerOptions.set("buttons", 0)
+    }
+        
+    do ..formatColHeaders(colHeaders, ..headerOptions)
+    
+    do ..closeTag("thead")
+    
+    do ..openTag("tbody")
+    
+    set trOptions = ##class(EasyCSP.Core.HashArray).%New()
+    
+    //
+    // Draw the first page.
+    //
+    
+    set nextRow = $order(^queryOut(..queryId, "rows", ..startRow - 1))
+    set counter = 1
+    
+    while nextRow '= "" {
+        
+        do ..openTag("tr", trOptions)
+        
+        for colNode = 1:1:numberOfColumns {
+            set nodeId = colHeaders.get(colNode)
+            s datum = $get(^queryOut(..queryId, "rows", nextRow, nodeId))
+            do ..addContent("    "_..formatCell(datum))
+        }
+        
+        // add an action-button column on the right
+        if doButtons {
+            set id = $get(^queryOut(..queryId, "rows", nextRow, idColumnLabel))
+            do ..openTag("td")
+            do buttons.run(id, buttonOptions, ..controllerId)
+            do ..stream.CopyFrom(buttons.render())
+            do buttons.resetStream()
+            do ..closeTag("td")
+        }
+        
+        do ..closeTag("tr")
+        
+        set nextRow = $order(^queryOut(..queryId,"rows",nextRow))
+        
+        set counter = counter + 1
+        quit:counter>..pageSize
+    }
+    
+    do ..closeTag("tbody")
+    
+    do ..closeTag("table")
+    
+    quit ..stream
+]]></Implementation>
+</Method>
+
+<Method name="unitTest">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pid:%Integer=0</FormalSpec>
+<Implementation><![CDATA[
+    if +$get(pid) = 0 {
+        write "Supply a query process ID."
+        quit
+    }
+    
+    set options = ##class(EasyCSP.Core.HashArray).%New()
+    do options.set("queryId", pid)
+    
+    set tst = ##class(EasyCSP.Web.Widget.ActiveTable).%New()
+    set stream = tst.run(options)
+    
+    do stream.Rewind()
+    while (stream.AtEnd = 0) {
+        set len = 2048
+        write stream.Read(len),!
+    }
+    
+    set stream = ""
+]]></Implementation>
+</Method>
+</Class>
+</Export>

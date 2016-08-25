@@ -1,0 +1,1629 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:13">
+<Class name="EasyCSP.Core.Component">
+<Description><![CDATA[
+Most EasyCSP classes ultimately extend this class. This class contains
+common properties and methods like error handling, debugging helpers,
+easy-to-remember names for MVBasic SYSTEM() function calls, and so on.
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Abstract>1</Abstract>
+<Language>mvbasic</Language>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64155,30271.19668</TimeChanged>
+<TimeCreated>63371,37535.117979</TimeCreated>
+
+<Property name="crlf">
+<Description>
+Shorthand for char(13,10) in COS or char(13):char(10) in MVBasic</Description>
+<Type>%String</Type>
+<Final>1</Final>
+<Calculated>1</Calculated>
+<SqlComputeCode> set {crlf} = $char(13)_$char(10) </SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Transient>1</Transient>
+<ReadOnly>1</ReadOnly>
+</Property>
+
+<Property name="debugging">
+<Description>
+Set this to TRUE (1) to turn on tracing.</Description>
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+<Transient>1</Transient>
+</Property>
+
+<Property name="errors">
+<Description>
+This is where "conditions" are stored for display later.</Description>
+<Type>EasyCSP.Core.Error</Type>
+<Collection>array</Collection>
+<Transient>1</Transient>
+</Property>
+
+<Property name="extendedDebugging">
+<Description>
+Currently not used but intended as a way to increase the chattiness of tracing.</Description>
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+<Transient>1</Transient>
+</Property>
+
+<Property name="nil">
+<Description>
+The empty string</Description>
+<Type>%String</Type>
+<Final>1</Final>
+<Calculated>1</Calculated>
+<SqlComputeCode> set {nil} = "" </SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Transient>1</Transient>
+<ReadOnly>1</ReadOnly>
+</Property>
+
+<Property name="nul">
+<Description>
+The NUL value</Description>
+<Type>%Char</Type>
+<Final>1</Final>
+<Calculated>1</Calculated>
+<SqlComputeCode> set {nul} = $char(0) </SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Transient>1</Transient>
+<ReadOnly>1</ReadOnly>
+</Property>
+
+<Property name="successful">
+<Description>
+A value used throughout the MVB system to denote the successful
+completion of any operation.</Description>
+<Type>%SmallInt</Type>
+<Final>1</Final>
+<Calculated>1</Calculated>
+<InitialExpression>1</InitialExpression>
+<Transient>1</Transient>
+<ReadOnly>1</ReadOnly>
+</Property>
+
+<Property name="unsuccessful">
+<Description>
+An arbitrary value used throughout the MVB system to denote an unsuccessful
+completion of any operation</Description>
+<Type>%SmallInt</Type>
+<Final>1</Final>
+<Calculated>1</Calculated>
+<InitialExpression>0</InitialExpression>
+<Transient>1</Transient>
+<ReadOnly>1</ReadOnly>
+</Property>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/ ***********************************************************************************************************
+/
+/                                         Handy stuff for shortening code
+/
+/ ***********************************************************************************************************
+*/
+]]></Content>
+</UDLText>
+
+<Method name="getMVSystemDelimiters">
+<Description>
+PICK traditional system delimiters + the Prime Information set of system delimiters.  Includes
+the set of characters from 240 through 255</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    delimiters = ""
+    for idx = 240 to 255
+        delimiters := char(idx)
+    next
+    return delimiters
+]]></Implementation>
+</Method>
+
+<Method name="listFromString">
+<Description>
+Pass in a comma-delimited string. This routine will trim leading
+and trailing spaces then return a Cache %List structure. Optionally,
+title-case each element in the list.</Description>
+<FormalSpec>inString:%String="",doTitleCase:%Boolean=0</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%List</ReturnType>
+<Implementation><![CDATA[
+    if $get(inString) = "" then return $listbuild("*")
+    convert ',' to @fm in inString
+    inString = trims(inString) ; * lop of leading or trailing spaces
+    if doTitleCase = 1 then
+        inString = oconvs(inString, "MCT")
+    end else
+        inString = oconvs(inString, "MCL")
+    end
+    
+    return $listFromString(inString, @fm)
+]]></Implementation>
+</Method>
+
+<Method name="ls">
+<Description><![CDATA[
+<p>
+Get a directory listing from the host file system.
+</p>
+
+<p>
+The return in the source control map global:
+<ol>
+<li>namespace</li>
+<li>"dirlist"</li>
+<ul>
+    <li>"columns" = the list of column headers</li>
+    <li>"directory" = the starting path of the search</li>
+    <li>"fileWildCard" = list of wildcards used in the search (default it *.*)</li>
+    <li>"listSubdirs" = search in subdirectories</li>
+    <li>"recurse" = set to 1 if the search is to descend into all subdirectories</li>
+    <li>"sortBy" = column name (from supplied) by which to sort entries</li>
+    <li>"rows", <i>n</i> = contents of each row
+</ul>
+</ul>
+</p>]]></Description>
+<Final>1</Final>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>directory:%String="",fileWildcards:%String="",sortBy:%String="",listSubdirs:%Boolean=1,recurse:%Boolean=0</FormalSpec>
+<Language>cache</Language>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    set availableFields = ##class(EasyCSP.Core.Array).%New()
+    do availableFields.split("Name;Type;Size;DateCreated;DateModified;ItemName", ";")
+
+    if $get(SortBy)="" set SortBy="Name"
+
+    q:'availableFields.find(sortBy) "FileHandler.DirectoryList : illegal SortBy '"_SortBy_"'"
+    
+    quit ..lsQuery(directory,fileWildcards,sortBy,listSubdirs,recurse)
+]]></Implementation>
+</Method>
+
+<Method name="lsQuery">
+<Final>1</Final>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>directory:%String,fileWildcards:%String,sortBy:%String,listSubdirs:%Boolean=1,recurse:%Boolean=0</FormalSpec>
+<Language>cache</Language>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    set namespace = $namespace
+    set result = ##class(EasyCSP.Core.Array).%New()
+    
+    set rset=##class(%ResultSet).%New()
+    set rset.ClassName="%File",rset.QueryName="FileSet"
+    do rset.Execute(directory, fileWildcards, sortBy, listSubdirs)
+    set colCount=rset.GetColumnCount()
+    while rset.Next() {
+        
+        set row = ##class(EasyCSP.Core.HashArray).%New()
+        
+        set itemName = rset.GetData(1)
+        for col=1:1:colCount {
+            do row.set(rset.GetColumnName(col), rset.GetData(col))
+        }
+        
+        do result.append(row)
+        
+        if (rset.Data("Type") = "D"),(recurse = 1) {
+            do result.append(..lsQuery(rset.Data("Name"),fileWildcards,sortBy,listSubdirs,recurse))
+        }
+    }
+    d rset.Close()
+    quit result
+]]></Implementation>
+</Method>
+
+<Method name="streamToString">
+<Description>
+It's often faster to compile content in a stream then shoot it
+out in one piece later. Convert the stream contents to a string.
+Keep in mind that Cache strings do have a length limitation.</Description>
+<FormalSpec>stream:%Stream</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ""
+    if $get(stream) = "" quit rtn
+    if $get(stream) '[ "Stream" quit rtn
+    
+    while (stream.AtEnd '= 0) {
+        set len = 16384
+        set atend = 0
+        try {
+            set substr = stream.Read(.len)
+        } catch {
+            set atend = 1
+            quit
+        }
+        
+        quit:atend=1 // leave the loop if the string is full
+        set rtn = rtn _ substr
+        
+    }
+    
+    quit rtn
+]]></Implementation>
+</Method>
+
+<Method name="TimeStamp">
+<Description>
+Pass in a flag indicating whether daylight saving time is in
+effect. Returns the current Cache date and a good guess at the time zone.</Description>
+<FormalSpec><![CDATA[&Now,&DST,&TZ]]></FormalSpec>
+<Language>cache</Language>
+<Implementation><![CDATA[
+    // current times
+    set h=$horolog ; Local
+    set n=$now()   ; Local (no DST)
+    set u=$now(0)  ; UTC
+    
+    // convert to seconds
+    set hh=(86400*h)+$piece(h,",",2)
+    set nn=(86400*n)+$piece(n,",",2)
+    set uu=(86400*u)+$piece(u,",",2)
+    
+    // results
+    set Now=h_"."_$piece(n,".",2)
+    set DST=$justify((hh-nn)/3600,0,0)
+    set TZ=$justify((hh-uu)/3600,0,0)
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/ ***********************************************************************************************************
+/
+/                                              Debugging Helpers
+/
+/ ***********************************************************************************************************
+*/
+]]></Content>
+</UDLText>
+
+<Method name="captureObjDump">
+<Description>
+Pass in some instance of an object and this will return a
+character stream captured from $SYSTEM.OBJ.Dump().</Description>
+<FormalSpec>obj</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    
+    output = "%GlobalCharacterStream"->%New()
+    output->WriteLine("<pre>")
+    %dumpthisthing = obj
+    execute "[do $SYSTEM.OBJ.Dump(%dumpthisthing)" capturing reply
+    
+    * ^ezDebugOut("dump") = reply
+    
+    output->Write(reply)
+    $kill %dumpthisthing
+    output->WriteLine("</pre>")
+    output->Rewind()
+    return output
+]]></Implementation>
+</Method>
+
+<Method name="debugDump">
+<Description>
+This is a more fully-fleshed dumper that includes preformatted-text tags.</Description>
+<FormalSpec>thing</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    
+    set level = $STACK(-1) - 1
+    do output.CopyFrom(..debugSay( "Debug dump from "_$STACK(level)_": "_$STACK(level,"PLACE")_" - "_$STACK(level,"MCODE")))
+    
+    do output.WriteLine( "<pre>")
+    set ctr = 0
+    FOR loop= level-1:-1:0 { 
+        do output.WriteLine( "Level "_loop_", context "_$STACK(loop)_": "_$STACK(loop,"PLACE")_ ", line: "_$STACK(loop,"MCODE"))
+        set ctr = ctr + 1
+        quit:ctr>4
+    }
+    
+    set ze = $ZE
+    do:ze'["<UNDEFINED" output.WriteLine("System Error: "_ze)
+    set errorLine = ##class(%SYSTEM.Process).ErrorLine()
+    do:errorLine'["/source" output.WriteLine( "Error line: "_errorLine)
+    
+    if $isObject(thing) {
+        set oRef = $get(thing)
+        do output.WriteLine( "OREF "_oRef)
+        do output.CopyFrom(..captureObjDump(oRef))
+        do output.CopyFrom(..dumpEntirely(oRef))
+        
+        if (oRef["Core.Array")!(oRef["Core.HashArray") {
+            set key = thing.Next()
+            while key '= "" {
+                set item = thing.get(key)
+                do output.WriteLine( "Key: "_key)
+                if $isObject(item) {
+                    do output.CopyFrom(..captureObjDump(item))
+                    do output.CopyFrom(..dumpEntirely(oRef))
+                } else {
+                    do output.WriteLine( ##class(EasyCSP.Conversions.HexDump).run(item))
+                }
+                set key = thing.Next(key)
+            }
+        }
+        
+    } else {
+        do output.WriteLine( ##class(EasyCSP.Conversions.HexDump).run(thing))
+    }
+    
+    do output.WriteLine("</pre>")
+    
+    do output.Rewind()
+    
+    quit output
+]]></Implementation>
+</Method>
+
+<Method name="debugMark">
+<Description>
+Output a string indicating the current execution location. </Description>
+<FormalSpec>phrase:%String=""</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    do output.WriteLine( "<pre>")
+    
+    set level = $STACK(-1) - 1
+    do output.CopyFrom(..debugSay("Debug mark: "_$STACK(level)_": "_$STACK(level,"PLACE")_" - "_$STACK(level,"MCODE")_..crlf_phrase_..crlf))
+    do output.WriteLine("</pre>")
+    
+    quit output
+]]></Implementation>
+</Method>
+
+<Method name="debugSay">
+<Description>
+Output a message to a web page during debugging. The output is marked
+with standout strings to be visually easier to locate in a long debug dump.</Description>
+<FormalSpec>phrase:%String=""</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    do output.WriteLine( "<pre>")
+    do output.WriteLine(..crlf_..crlf_"===========================================================================================")
+    do output.WriteLine("==========================================================================================="_..crlf_..crlf)
+    do output.WriteLine(phrase)
+    do output.WriteLine(..crlf_..crlf_"===========================================================================================")
+    do output.WriteLine("==========================================================================================="_..crlf_..crlf)
+    do output.WriteLine("</pre>")
+    
+    do output.Rewind()
+    
+    quit output
+]]></Implementation>
+</Method>
+
+<Method name="dumpEntirely">
+<Description>
+Iteratively dump an object then return the results as a string. This
+function will recurse to an n-depth into the object elements. Dumps for
+complex objects can be quite long but very useful for debugging.</Description>
+<FormalSpec>object</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    
+    set oref = $get(object)
+    quit:oref="" output
+    
+    set classDef = ##class(%Library.CompiledClass).%OpenId($piece(oref, "@", 2))
+    quit:classDef="" output // shouldn't happen but reality occasionally rears its head
+    
+    set objectName = classDef.Name
+    
+    do output.WriteLine("<pre>")
+    
+    set level = $STACK(-1) - 1
+    do output.WriteLine( "Debug dump from "_$STACK(level)_": "_$STACK(level,"PLACE")_" - "_$STACK(level,"MCODE"))
+    
+    do output.WriteLine("===============================================================================")
+    do output.WriteLine("                             "_objectName)
+    do output.WriteLine("===============================================================================")
+    
+    set propertyList = ..getProperties($piece(oref, "@", 2))
+    
+    set key = propertyList.Next()
+    
+    while key '= "" {
+        
+        set property = propertyList.GetAt(key)
+        
+        set calculated = +property.Calculated
+        set isPrivate = +property.Private
+        set name = property.Name
+        set type = property.Type
+        
+        set canUse = 0
+        
+            
+        if isPrivate {
+            do output.WriteLine(objectName _ "::" _ name _ " is marked &lt;&lt;PRIVATE&gt;&gt;")
+            do output.WriteLine("===============================================================================")
+            set key = propertyList.Next(key)
+            set canUse = 0
+        }
+            
+    
+        if 'property.Calculated & ($get(property)'["Core.Array") & ($get(property)'["Core.HashArray") {
+            do output.WriteLine(objectName _ "::" _ name _ " is marked calculated")
+            do output.WriteLine("===============================================================================")
+            set key = propertyList.Next(key)
+            set canUse = 0
+        }
+        
+        do:canUse output.CopyFrom(..captureObjDump(property))
+        
+        if canUse & $isObject($property(object, property.Name)) {
+            do ..dumpEntirely($property(object, property.Name))
+        } else {
+            do output.WriteLine(##class(EasyCSP.Conversions.HexDump).run($property(object, property.Name)))
+        }
+        
+        set key = propertyList.Next(key)
+        
+    }
+    
+    do output.WriteLine("</pre>")
+    
+    quit output
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/ ***********************************************************************************************************
+/
+/                                              Other Helpers
+/
+/ ***********************************************************************************************************
+*/
+]]></Content>
+</UDLText>
+
+<Method name="checkdir">
+<Description>
+Using the MVBasic OPENPATH command, check the existence of an OS path (Windows or
+*nix -- VMS is not supported here). Return 1 (TRUE) if the path exists.</Description>
+<FormalSpec>pathname:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(pathname) = "" then return 0
+    
+    openpath pathname to dir on error return 0 else return 0
+    
+    close dir
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="mkdir">
+<Description>
+For Windows, specify the drive-letter:\ portion explicitly. If the dir argument passed in
+does not have a drive specification then this routine will refuse to create it.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>dir:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(dir) = "" then return 0 ; * where is the new folder supposed to live?
+    slash = @ME->slash()
+    
+    convert "\/" to @fm:@fm in dir
+    runningWindows = (system(91) = 1)
+    
+    if runningWindows then
+        driveSpec = dir<1>
+        if not(driveSpec matches "1A':'") then return 0
+        rootDir = field(dir, @fm, 1, 2)
+        del dir<1> ; del dir<1> ; * start creating stems at the top then work on the subdirs below
+    end else
+        if dir<1> = "" then del dir<1>
+        rootDir = "/" : dir< 1 >
+        del dir<1>
+        startAt = 1
+    end
+    
+    convert @fm to slash in rootDir
+    
+    * if the topmost part of the directory path doesn't exist and can't be
+    * created then this process has to stop.
+    if @ME->checkdir( rootDir ) = 0 then
+        pcperform "mkdir " : rootDir
+        if @ME->checkdir( rootDir ) = 0 then return 0
+    end
+    
+    dirLength = dcount(dir, @fm)
+    
+    pieces = 1
+    for idx = 1 to dirLength
+        nextStem = rootDir : slash : field(dir, @fm, 1, idx)
+        convert @fm to slash in nextStem
+        if @ME->checkdir( nextStem ) = 0 then
+            pcperform "mkdir " : nextStem
+            if @ME->checkdir( nextStem ) = 0 then return 0
+        end
+    next
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/ ***********************************************************************************************************
+/
+/                                              Error Processing
+/
+/ ***********************************************************************************************************
+*/
+]]></Content>
+</UDLText>
+
+<Method name="ClearConditions">
+<Description>
+Clear the global errorCode, errorDescription, and errorRaisedBy variables
+and further set the value of the STATUS() function to 0 (integer zero).</Description>
+<Implementation><![CDATA[
+    
+    idx = ""
+    loop
+        idx = @ME->errors->Next(idx)
+    while idx <> "" do
+        @ME->errors->RemoveAt(idx)
+    repeat
+
+    ASSIGN 0 TO STATUS()
+]]></Implementation>
+</Method>
+
+<Method name="copyConditions">
+<Description>
+Copies the error conditions from an instantiated class into the
+current class for reporting to a page.</Description>
+<FormalSpec>sourceConditionArray</FormalSpec>
+<Language>cache</Language>
+<Implementation><![CDATA[
+    if '$isobject(sourceConditionArray) quit
+    set idx = sourceConditionArray.Next("")
+    while idx '= "" {
+        do ..errors.SetAt(sourceConditionArray.GetAt(idx), ..errors.Count() + 1)
+        set idx = sourceConditionArray.Next(idx)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="formatConditions">
+<Description>
+Looks in the framework error structure then returns any error messages
+formatted as HTML.</Description>
+<Language>cache</Language>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ##class(%GlobalCharacterStream).%New()
+    set idx = ..errors.Next("")
+    while idx '= "" {
+        set errorObj = ..errors.GetAt(idx)
+        set line = $mvfmt(errorObj.code, "10 R") _ " - " _ $mvfmt(errorObj.message, "80 L") _ " - " _ errorObj.occurredIn
+        do rtn.WriteLine(line)
+        set idx = ..errors.Next(idx)
+    }
+    
+    do rtn.Rewind()
+    
+    quit rtn
+]]></Implementation>
+</Method>
+
+<Method name="formatConditionsHTML">
+<Description>
+Generate a summary of the validation errors found by a method or function. This
+is often used in data-entry pages where users have submitted information and expect feedback
+after a form is submitted. As opposed to model errors, this function looks at
+the global framework errors structure.</Description>
+<FormalSpec>sequence:%Integer=1,summaryContainer:%String="div",summaryContainerOptions:EasyCSP.Core.HashArray</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    
+    if $get(summaryContainer) = "" set summaryContainer = "div"
+    if +$get(sequence) = 0 set sequence = 1
+    
+    if $get(summaryContainerOptions) = "" set summaryContainerOptions = ##class(EasyCSP.Core.HashArray).%New()
+        
+    // Open a tag for the outer container that controls visibility of the error summary
+    do output.WriteLine(..tag(summaryContainer,summaryContainerOptions,0,0))
+    set innerOptions = ##class(EasyCSP.Core.HashArray).%New()
+    //do innerOptions.set("id", "errorSummary")
+    //do innerOptions.set("class", "clear")
+    do output.WriteLine(..tag("div",innerOptions,"",0))
+    
+    // Add instructions to the viewer
+    do innerOptions.unsetAll()
+    do innerOptions.set("id", "error_header")
+    do innerOptions.set("style", "color: red;")
+    do innerOptions.set("class", "hidden")
+    do output.WriteLine(..tag("p", htmlOptions, "Please fix the following errors:", 1))
+    
+    // Add the container for the errors (open, write error message content, close)
+    do innerOptions.unsetAll()
+    do innerOptions.set("id", "errors"_sequence)
+    //do innerOptions.set("class", "clear")
+    do innerOptions.set("style", "error")
+    do output.WriteLine(..tag("div", htmlOptions, "", 0))
+    
+    // Inside the error container, iterate through all the errors found in the model:
+    do innerOptions.unsetAll()
+    do innerOptions.set("style", "error")
+    set errorArray = ..errors // retrieve all the errors in a lump
+    set idx = errorArray.Next("")
+    while idx '= "" {
+        set def = errorArray.GetAt(idx)
+        do output.WriteLine(..tag("p",htmlOptions,def.code_": "_def.message_" at "_def.occurredIn,1))
+        set idx = errorArray.Next(idx)
+    }
+    
+    // Close the error container
+    do output.WriteLine("</div>")
+    
+    // Close the outer container
+    do output.WriteLine("</div>")
+    do output.WriteLine("</div>")
+    
+    quit output
+]]></Implementation>
+</Method>
+
+<Method name="hasConditions">
+<Description>
+Return a TRUE or FALSE indicating whether a method or function has
+recorded an error condition.</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return (@ME->errors->Count() > 0)
+]]></Implementation>
+</Method>
+
+<Method name="SetCondition">
+<Description>
+Set up the Error code, description, and routine reporting system-wide variables.
+These are conditioned so as not to break any multivalue constraints.</Description>
+<FormalSpec>errorCode:%Integer=0,errorDescription:%String="",occurredIn:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<Implementation><![CDATA[
+    if errorCode = 0 then
+        @ME->ClearConditions()
+        return
+    end
+            
+    * If an error description was provided by the System DecomposeStatus call it has crlf's in it
+    errorDescription = EREPLACE( errorDescription, @ME->crlf, @VM )
+
+    if $get(occurredIn) = "" then
+        errorRaisedBy = @ME->getCaller(1)
+    end else
+        errorRaisedBy = occurredIn
+    end
+    
+    err = "EasyCSP.Core.Error"->%New(errorCode, errorDescription, errorRaisedBy)
+    @ME->errors->SetAt(err,@ME->errors->Count() + 1)
+
+    ASSIGN errorCode TO STATUS()
+
+    RETURN
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/ ***********************************************************************************************************
+/
+/                                  Process control and object metadata
+/
+/ ***********************************************************************************************************
+*/
+]]></Content>
+</UDLText>
+
+<Method name="getCaller">
+<Description>
+Best guess at finding which routine called the current one.</Description>
+<FormalSpec>depth:%Boolean=0</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if $get(depth) = "" then deeper = 0
+    Stack = @ME->getProgramCallStack()
+    caller = Stack< DCount(Stack, @fm ) - 2 - depth >
+    return caller<1,2> : @fm : caller<1,3>
+]]></Implementation>
+</Method>
+
+<Method name="getParameters">
+<Description><![CDATA[
+Return the parameters (or class constants, if you like) for the class named in the <i>className</i> formal spec parameter]]></Description>
+<Final>1</Final>
+<FormalSpec>className:%String=""</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%ArrayOfDataTypes</ReturnType>
+<Implementation><![CDATA[
+    if $get(className) = "" quit ""
+    
+    set rtn = ##class(%ArrayOfDataTypes).%New()
+    
+    set classDef = ##class(%Dictionary.CompiledClass).%OpenId(className)
+    
+    if '$isobject(classDef) quit ""
+    
+    /*
+    if ($find(classDef.Super, "MV.Adaptor") > 0) ! ($find(classDef.Super, "MVModel.Base") > 0) {
+        set ..isMV = 1
+    }
+    */
+    
+    quit classDef.Parameters
+]]></Implementation>
+</Method>
+
+<Method name="getPID">
+<Language>cache</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    quit $j
+]]></Implementation>
+</Method>
+
+<Method name="getPrimaryKey">
+<Description>
+Find the primary key for the current %Persistent class. Return its compiled property definition if
+the key is located.</Description>
+<Final>1</Final>
+<Language>cache</Language>
+<ReturnType>%Dictionary.CompiledProperty</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ""
+    if $get(^oddCOM($classname())) = "" quit "" // not defined or not compiled
+    set classDef = ##class(%Dictionary.CompiledClass).%OpenId($className())
+    if $find(classDef.Super, "%Persistent") = 0 quit rtn // This isn't a persistent class, ergo has no primary key.
+        
+    set o = $order(^oddCOM($classname(), "i", ""))
+    while o '= "" {
+        if $get(^oddCOM($classname(), "i", o, 5)) = "key" {
+            set pk = ^oddCOM($classname(), "i", o, "I", 23)
+            set properties = classDef.Properties
+            set idx = properties.Next("")
+            while idx '= "" {
+                s propertyDef = properties.GetAt(idx)
+                if propertyDef.Name = pk {
+                    set rtn = propertyDef
+                    quit
+                }
+                set idx = properties.Next(idx)
+            }
+        }
+        if rtn '= "" quit
+        set o = $order(^oddCOM($classname(), "i", o))
+    }
+    quit rtn
+]]></Implementation>
+</Method>
+
+<Method name="getMethods">
+<Description>
+Return the array of properties in a class definition</Description>
+<Final>1</Final>
+<FormalSpec>className:%String=""</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%ArrayOfDataTypes</ReturnType>
+<Implementation><![CDATA[
+    if $get(className) = "" quit ""
+    
+    set rtn = ##class(%ArrayOfDataTypes).%New()
+    
+    set classDef = ##class(%Dictionary.CompiledClass).%OpenId(className)
+    
+    if '$isobject(classDef) quit ""
+    
+    quit classDef.Methods
+]]></Implementation>
+</Method>
+
+<Method name="getProperties">
+<Description>
+Return the array of properties in a class definition</Description>
+<Final>1</Final>
+<FormalSpec>className:%String=""</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%ArrayOfDataTypes</ReturnType>
+<Implementation><![CDATA[
+    if $get(className) = "" quit ""
+    
+    set rtn = ##class(%ArrayOfDataTypes).%New()
+    
+    set classDef = ##class(%Dictionary.CompiledClass).%OpenId(className)
+    
+    if '$isobject(classDef) quit ""
+    
+    quit classDef.Properties
+]]></Implementation>
+</Method>
+
+<Method name="hasMethod">
+<Description><![CDATA[
+Return a true or false indicting whether the current instance contains a method named in the <i>methodName</i> formal spec parameter.]]></Description>
+<Final>1</Final>
+<FormalSpec>methodName</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    /* This is WAYYYYY too slow
+    set className = ..%ClassName(1)
+    set methods = ..getMethods(className)
+    
+    set key = methods.Next()
+    while key'= "" {
+        set method = methods.GetAt(key)
+        return:method.Name=methodName 1
+        set key = methods.Next(key)
+    }
+    
+    quit 0
+    */
+
+    quit:$get(methodName)="" 0
+    q:$get(methodName)="" 0
+    q $s($d(^oddCOM($classname(),"m",methodName,44))#2:^(44),$d(^oddCOM($g(^(2),$classname()),"m",methodName,44))#2:^(44),1:$s($d(^oddDEF($g(^oddCOM($classname(),"m",methodName,2),$classname()),"m",methodName,44))#2:^(44),1:$g(^%qCacheObjectKey(1,"m",44))))
+]]></Implementation>
+</Method>
+
+<Method name="hasProperty">
+<Description><![CDATA[
+Return a true or false indicting whether the current instance contains a property named in the <i>propertyName</i> formal spec parameter.]]></Description>
+<Final>1</Final>
+<FormalSpec>propertyName</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    q:$get(propertyName)="" 0
+    /*
+    set className = ..%ClassName(1)
+    set properties = ..getProperties(className)
+    
+    set key = properties.Next()
+    while key'= "" {
+        set property = properties.GetAt(key)
+        return:property.Name=propertyName 1
+        set key = properties.Next(key)
+    }
+    
+    quit 0
+    */
+    
+    q:$get(propertyName)="" 0
+    s test = $s($d(^oddCOM($classname(),"a",propertyName,40))#2:^(40),$d(^oddCOM($g(^(2),$classname()),"a",propertyName,40))#2:^(40),1:$s($d(^oddDEF($g(^oddCOM($classname(),"a",propertyName,2),$classname()),"a",propertyName,40))#2:^(40),1:$g(^%qCacheObjectKey(1,"a",40))))
+    q (test'="")
+]]></Implementation>
+</Method>
+
+<Method name="instanceOf">
+<Description>
+A blunt-force way of determining if an object is an instance
+of a given type of class. It's not exact but close enough for
+any framework purpose. Pass in an object reference and a string
+for comparison then this function will return a TRUE or FALSE
+if the instance oref contains the comparison string.</Description>
+<FormalSpec>oref,class</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(oref) = "" quit 0
+    if '$ISOBJECT(oref) quit 0
+    if $mvoconv($get(oref),"MCL") [ $mvoconv(class, "MCL") quit 1
+    quit 0
+]]></Implementation>
+</Method>
+
+<Method name="objectHasMethod">
+<Description><![CDATA[
+Return a true or false indicting whether the current instance contains a method named in the <i>methodName</i> formal spec parameter.]]></Description>
+<Final>1</Final>
+<FormalSpec>oref,methodName</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    q:$get(methodName)="" 0
+    q:$get(oref)="" 0
+    q:'$isObject(oref) 0
+    q $s($d(^oddCOM($classname(oref),"m",methodName,44))#2:^(44),$d(^oddCOM($g(^(2),$classname(oref)),"m",methodName,44))#2:^(44),1:$s($d(^oddDEF($g(^oddCOM($classname(oref),"m",methodName,2),$classname(oref)),"m",methodName,44))#2:^(44),1:$g(^%qCacheObjectKey(1,"m",44))))
+]]></Implementation>
+</Method>
+
+<Method name="objectHasProperty">
+<Description><![CDATA[
+Return a true or false indicting whether the current instance contains a property named in the <i>propertyName</i> formal spec parameter.]]></Description>
+<Final>1</Final>
+<FormalSpec>oref,propertyName</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    q:$get(propertyName)="" 0
+    q:$get(oref)="" 0
+    q:'$isObject(oref) 0
+    s test = $s($d(^oddCOM($classname(),"a",propertyName,40))#2:^(40),$d(^oddCOM($g(^(2),$classname(oref)),"a",propertyName,40))#2:^(40),1:$s($d(^oddDEF($g(^oddCOM($classname(),"a",propertyName,2),$classname()),"a",propertyName,40))#2:^(40),1:$g(^%qCacheObjectKey(1,"a",40))))
+    q (test'="")
+]]></Implementation>
+</Method>
+
+<Method name="toggleDebug">
+<Description>
+Turn global debugging traces on or off. Warning: some paths through
+the framework can be very, very chatty.</Description>
+<FormalSpec>value:%Boolean=0</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set value = +value
+    
+    set:+$get(value)=0 %EasyCSPDebugging = 0 ; if it's really 0 then turn debugging off
+    set:value'=0 %EasyCSPDebugging = 1 ; any other value sets it to 1
+    
+    if %EasyCSPDebugging = 1 {
+        //kill ^%ISCLOG set ^%ISCLOG = 3 read x set ^%ISCLOG = 0
+    }
+    
+    quit %EasyCSPDebugging ; return the new state
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/ ***********************************************************************************************************
+/
+/      Names for System functions to make code more readable. Names are easier to remember than numbers.
+/
+/ ***********************************************************************************************************
+*/
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+
+*/
+]]></Content>
+</UDLText>
+
+<Method name="getPrinterIsOn">
+<Description>
+System(1) - is the printer on?</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(1)
+]]></Implementation>
+</Method>
+
+<Method name="getCurrentPageWidth">
+<Description>
+System(2) - Current page width</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(2)
+]]></Implementation>
+</Method>
+
+<Method name="getCurrentPageDepthGet">
+<Description>
+System(3) - Current page depth</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(3)
+]]></Implementation>
+</Method>
+
+<Method name="getLinesRemainingOnPage">
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(4)
+]]></Implementation>
+</Method>
+
+<Method name="getCurrentPageNumber">
+<Description>
+System(5) - The current page number</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(5)
+]]></Implementation>
+</Method>
+
+<Method name="getCurrentLineNumber">
+<Description>
+System(6) - The current line number on the page</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(6)
+]]></Implementation>
+</Method>
+
+<Method name="getTerminalTypeCode">
+<Description>
+System(7) - The terminal type-code</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(7)
+]]></Implementation>
+</Method>
+
+<Method name="getCPUMillisecondsUsed">
+<Description>
+System(9) The number of CPU milliseconds consumed</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(9)
+]]></Implementation>
+</Method>
+
+<Method name="getDataStackIsActive">
+<Description>
+System(10) Set @true if a data stack is active</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(10)
+]]></Implementation>
+</Method>
+
+<Method name="getSelectListActive">
+<Description>
+System(11) Set @true if a select list is active</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(11)
+]]></Implementation>
+</Method>
+
+<Method name="getMillisecondsSinceMidnight">
+<Description>
+System(12) The number of milliseconds since today's midnight</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(12)
+]]></Implementation>
+</Method>
+
+<Method name="RQM">
+<Description>
+System(13) Release Quantum - causes a one-second sleep</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(13)
+]]></Implementation>
+</Method>
+
+<Method name="getTypeaheadCountGet">
+<Description>
+System(14) The number of characters remaining in the typeahead buffer</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(14)
+]]></Implementation>
+</Method>
+
+<Method name="getCommandLineOptionCodes">
+<Description>
+System(15) A string containing the character options from the command line</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(15)
+]]></Implementation>
+</Method>
+
+<Method name="getRunningFromPROCGet">
+<Description>
+System(16) Set @true if the current program was initiated from a PROC</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(16)
+]]></Implementation>
+</Method>
+
+<Method name="getSTOPCodeForChildProcessGet">
+<Description>
+System(17) Stop code for a child process</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(17)
+]]></Implementation>
+</Method>
+
+<Method name="getMyPortNumber">
+<Description>
+System(18) Contains the port number for this process</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(18)
+]]></Implementation>
+</Method>
+
+<Method name="getLoginNameGet">
+<Description>
+System(19) Contains the login name for this process</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(19)
+]]></Implementation>
+</Method>
+
+<Method name="getSpoolerJobNumber">
+<Description>
+System(20) Contains the current (or last) spooler job number if the printer is open</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(20)
+]]></Implementation>
+</Method>
+
+<Method name="getEXECUTELevelNumber">
+<Description>
+System(22) Contains the level number for the current nesting of EXECUTE</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(22)
+]]></Implementation>
+</Method>
+
+<Method name="getTerminalBreakKeyOn">
+<Description>
+System(23) Set to @true if the terminal BREAK key is available</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(23)
+]]></Implementation>
+</Method>
+
+<Method name="getTerminalEchoOn">
+<Description>
+System(24) Set to @true if terminal echo is on</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(24)
+]]></Implementation>
+</Method>
+
+<Method name="getThisProcessIsAPhantom">
+<Description>
+System(25) Set to @true if the current process is a phantom</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(25)
+]]></Implementation>
+</Method>
+
+<Method name="getInputPromptCharacter">
+<Description>
+System(26) Contains the current input prompt string</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(26)
+]]></Implementation>
+</Method>
+
+<Method name="getLicenseCode">
+<Description>
+System(31) Contains the system license code</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(31)
+]]></Implementation>
+</Method>
+
+<Method name="getMVDirectoryPath">
+<Description>
+System(32) The physical MV directory path</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(32)
+]]></Implementation>
+</Method>
+
+<Method name="getCommandStack">
+<Description>
+System(33) A copy of the command stack</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(33)
+]]></Implementation>
+</Method>
+
+<Method name="getInputStackDataPending">
+<Description>
+System(34) Set @true if there are data yet pending in the input stack</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(34)
+]]></Implementation>
+</Method>
+
+<Method name="getCurrentNumberOfMVUsers">
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(35)
+]]></Implementation>
+</Method>
+
+<Method name="getThisMVBASICProgramName">
+<Description>
+System(40) The global name of this MVBasic routine</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(40)
+]]></Implementation>
+</Method>
+
+<Method name="getCacheVersionNumber">
+<Description>
+System(41) Cache version number</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(41)
+]]></Implementation>
+</Method>
+
+<Method name="getLockHolderPortNumber">
+<Description>
+System(43) Port number of the process holding the lock last inquired upon</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(43)
+]]></Implementation>
+</Method>
+
+<Method name="getProgramCallStack">
+<Description>
+System(49) Program call stack</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(49)
+]]></Implementation>
+</Method>
+
+<Method name="getRunningWindows">
+<Description>
+Boolean: @true if this Cache instance is running on Windows</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    return ( SYSTEM(91) = 1 )
+]]></Implementation>
+</Method>
+
+<Method name="getslash">
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    IF SYSTEM(91) = 0 THEN RETURN( "/" ) ELSE RETURN( "\")
+]]></Implementation>
+</Method>
+
+<Method name="getUniversalTime">
+<Description>
+System(99) Universal time; the number of seconds since December 31, 1970. This is the same as the *nix epoch.</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(99)
+]]></Implementation>
+</Method>
+
+<Method name="getCacheNamespace">
+<Description>
+System(1052) The Cache namespace in which this process is running</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(1052)
+]]></Implementation>
+</Method>
+
+<Method name="getClientIPAddress">
+<Description>
+System(1053) The client's IP address</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(1053)
+]]></Implementation>
+</Method>
+
+<Method name="getCacheManagerDirectoryPath">
+<Description>
+System(1054) The physical path to the Cache instance mgr directory</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(1054)
+]]></Implementation>
+</Method>
+
+<Method name="getCurrentNamespacePath">
+<Description>
+System(1055) The current Cache namespace in which this process is running</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(1055)
+]]></Implementation>
+</Method>
+
+<Method name="getUnixMidnightToday">
+<Description>
+Return the Unix epoch integer date for midnight 0000Z today.</Description>
+<ReturnType>%BigInt</ReturnType>
+<Implementation><![CDATA[    RETURN INT( SYSTEM(99) - TIME() )
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/ ***********************************************************************************************************
+/
+/ Helpers to find pluggable components. There is a strict search hierarchy that allows many of the packaged
+/ EasyCSP framework objects to be replaced or overridden without the need to modify the framework itself.
+/ Using a search hierarchy allows a programmer to replace a framework function just by adding a class with
+/ the same name in the local namespace's package store. For instance, to replace the default login app, a
+/ programmer could either write a new login handler or clone and modify the existing one. The default location
+/ for the login handler is "EasyCSP.Apps.Default.Login". In the application namespace (not in EasyCSP's
+/ namespace), create a package called "Apps". The programmer could go one of two ways here: either lump
+/ all apps together in "Apps" or divide them by purpose. (NOTE: a ".Default" subpackage stem is always 
+/ searched.) For the sake of elucidation, assume the local namespace is "Accounting" and that EasyCSP has
+/ been shared to it and the programmer wants to override "Login". In Studio, switch to the Accounting
+/ namespace. Create a class called "Apps.Default.Login", or "Apps.Accounting.Login", or just "Apps.Login".
+/ The search rules are (assuming the scenario where the app is in Accounting's namespace): Apps.Login,
+/ Apps.Default.Login, EasyCSP.Apps.Login, then EasyCSP.Apps.Default.Login.
+/ 
+/ Another benefit of using the search, over and above pluggability, is the removal of case-sensitivity to a
+/ large degree. In the foregoing scenario, "login", "Login", and "LOGIN" are equivalent.
+/
+/ ***********************************************************************************************************
+*/
+]]></Content>
+</UDLText>
+
+<Method name="eolToAM">
+<Description>
+Some controls like textareas may return either a cr, lf, or crlf between lines.
+Convert these into value marks so they can be processed.</Description>
+<FormalSpec>value:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if $get(value) = "" then return ""
+    values = "EasyCSP.Core.Array"->%New()
+    values->split(value, @fm)
+    value = values->toDynamicArray()
+    value = convert(@ME->crlf, @am:@am, value)
+    return trim(value, @am) ; * trim out what used to be blank lines or crlf sequences
+]]></Implementation>
+</Method>
+
+<Method name="objectFactory">
+<Description><![CDATA[
+<p>
+Universal object factory for EasyCSP framework items. "baseName" is the simple name of
+a particular class to find. The packageType is a literal value, one of the following:
+<ul>
+    <li>app - an EasyCSP composite model or app. The rules for app and view searches are listed below.</li>
+    <li>controller - a process controller that can be located either in the local "Controller.Controllers" package or by default in the "EasyCSP.Controller.Controllers" package.</li>
+    <li>layout - a layout object that can be located either in the local "Layout.Layouts" package or by default in the "EasyCSP.Layout.Layouts" package.</li>
+    <li>model - a data model class that can be located either in the local "Model.Models" package or by default in the "EasyCSP.Model.Models" package.</li>
+    <li>view - a presentation or web page that can be located either in the local "Views.<i>controllerId</i>" or "Views.Default" package, or by default in the "EasyCSP.Views.<i>controllerId</i>" or "EasyCSP.Views.Default" package.</li>
+</ul>
+</p>
+
+<p>
+Views are managed by controllers and in a sense belong to them. Identically-named views can exists as members of different
+controllers' suites. For instance, an "index" page could exist in any or any number of controller/view subpackages. By default,
+the object factory will search for default presentations if no other can be located.
+</p>
+
+<p>
+The object factory simplifies extending the framework by adding a new class in the appropriate location. There is a fairly
+strict object hierarchy; controllers must be grouped together under a Controller package, views must be grouped together
+under a Views.<i>controllerId</i> package, etc. In all cases, the local namespace will be searched first for a package of
+the requested type. If the class isn't found then EasyCSP<i>packageType</i> package folders are searched. If a default is
+available in the package, then defaults are searched last providing that the "acceptDefault" argument is set to 1 (TRUE).
+The main benefit of using a finder is to remove most of the case-sensitivity from object names. This kind of simple
+mistake can be difficult to spot in a mass of code.
+</p>
+
+<p>
+For instance, the programmer wants the web application to get an instance of a controller called "Users" by calling
+%EasyCSPApp.objectFactory("Users", "controller", 0, parameters). The factory first searches for a class called
+"Controllers.Users". If that doesn't exist, it will then try "EasyCSP.Controller.Controllers.Users". Since there is no
+default for controllers, the search will end there in an exception if the class is not found.
+</p>
+
+<p>
+The rules for views are only slightly different because views belong to controllers. Local views must be placed in the
+"Views.<i>controllerId</i> package. Stock views exist in the "EasyCSP.Views.<i>controllerId</i>" package. EasyCSP also
+supplies a "Views.Default" package that is searched as a last resort unless "acceptDefault" is set to 0 (FALSE). Several
+default views are supplied with EasyCSP since they are repetitive sorts of outputs that don't need to be copied over
+and over for each controller.
+</p>]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>baseName:%String="",packageType:%String="",acceptDefault:%Boolean=1,parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%RegisteredObject</ReturnType>
+<Implementation><![CDATA[
+    if $get(baseName) = "" {
+        throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "OBJFACTORY1", $STACK($STACK(-1)-1,"LOCATION"), "objectFactory() was called with no class name to find.")
+    }
+    
+    if $get(packageType) = "" {
+        throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "OBJFACTORY2", $STACK($STACK(-1)-1,"LOCATION"), "objectFactory() was called with no package type (app/controller/converter/etc) to search.")
+    }
+    
+    if $get(parameters) = "" set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set rules = ##class(EasyCSP.Configuration.ObjectFactorySearchRules).%New()
+    
+    set searchPattern = rules.rules.get($mvoconv(packageType, "MCL"))
+    
+    if searchPattern = "" {
+        throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "OBJFACTORY3", $STACK($STACK(-1)-1,"LOCATION"), "objectFactory() was called with an invalid search rule.")
+    }
+    
+    set def = ""
+    set idx = searchPattern.Next()
+        
+        set controllerId = ""
+        if $get(%EasyCSPApp) '= "" {
+            set:$isobject(%EasyCSPApp.controller) controllerId = %EasyCSPApp.controller.id
+        }
+    
+    while idx '= "" {
+        
+        set rule = searchPattern.get(idx)
+        
+        set baseNameL = $mvoconv(baseName, "MCL")
+        set baseNameT = $mvoconv(baseName, "MCT")
+        set baseNameU = $mvoconv(baseName, "MCU")
+        
+        if controllerId '= "" {
+            set pattern = $replace(rule, "@", controllerId)
+            set search = pattern _ "." _ baseName
+            set searchL = pattern _ "." _ baseNameL
+            set searchT = pattern _ "." _ baseNameT
+            set searchU = pattern _ "." _ baseNameU
+        } else {
+            set pattern = $replace(rule, "@", "")
+            set search = rule_"."_baseName
+            set searchL = rule_"."_baseNameL
+            set searchT = rule_"."_baseNameT
+            set searchU = rule_"."_baseNameU
+        }
+        
+        set def = ##class(%Dictionary.CompiledClass).%OpenId(search)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(searchL)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(searchT)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(searchU)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(baseName)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(baseNameL)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(baseNameT)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(baseNameU)
+        
+        if $isobject(def) {
+            
+            set instance = ""
+            try {
+                set instance = $classmethod(def.Name, "%New", parameters)
+            } catch theException {
+                /*
+                write !!,"<pre>",!
+                d $SYSTEM.OBJ.Dump(theException)
+                write "Definition name: "_def.Name
+                d $SYSTEM.OBJ.Dump( parameters)
+                write "</pre>",!
+                */
+                set hasError = 1
+            }
+                
+            if $isobject(instance) return instance
+        }
+                
+        set idx = searchPattern.Next(idx)
+    }
+    
+    set ctr = 1
+    set ^ezDebugOut($now(), ctr) = "Could not find basename "_baseName
+    set level = $STACK(-1)
+    set ctr = 0
+    FOR loop= level:-1:0 { 
+        set ctr = ctr+1
+        set ^ezDebugOut($now(), ctr) = "Level "_loop_", context "_$STACK(loop)_": "_$STACK(loop,"PLACE")_ ", line: "_$STACK(loop,"MCODE")
+    }
+    
+    throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "OBJFACTORY4", $STACK($STACK(-1)-1,"LOCATION"), baseName_" can not be located.")
+]]></Implementation>
+</Method>
+
+<Method name="runComponent">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>baseName:%String="",packageType:%String="",acceptDefault:%Boolean=1,parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if $get(baseName) = "" {
+        throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "RUNCOMPONENT1", $STACK($STACK(-1)-1,"LOCATION"), "objectFactory() was called with no class name to find.")
+    }
+    
+    if $get(packageType) = "" {
+        throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "RUNCOMPONENT2", $STACK($STACK(-1)-1,"LOCATION"), "objectFactory() was called with no package type (app/controller/converter/etc) to search.")
+    }
+    
+    if $get(parameters) = "" set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set rules = ##class(EasyCSP.Configuration.ComponentSearchRules).%New()
+    
+    set searchPattern = rules.rules.get($mvoconv(packageType, "MCL"))
+    
+    if searchPattern = "" {
+        throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "RUNCOMPONENT3", $STACK($STACK(-1)-1,"LOCATION"), "objectFactory() was called with an invalid search rule.")
+    }
+    
+    set id = ""
+    
+    set def = ""
+    set idx = searchPattern.Next()
+    
+    while idx '= "" {
+        
+        set rule = searchPattern.get(idx)
+        
+        set controllerId = ""
+        if $get(%EasyCSPApp)'="" {
+            set:$isobject(%EasyCSPApp.controller) controllerId = %EasyCSPApp.controller.id
+        }
+        
+        set baseNameL = $mvoconv(baseName, "MCL")
+        set baseNameT = $mvoconv(baseName, "MCT")
+        set baseNameU = $mvoconv(baseName, "MCU")
+        
+        if controllerId '= "" {
+            set pattern = $replace(rule, "@", controllerId)
+            set search = pattern _ "." _ baseName
+            set searchL = pattern _ "." _ baseNameL
+            set searchT = pattern _ "." _ baseNameT
+            set searchU = pattern _ "." _ baseNameU
+        } else {
+            set pattern = $replace(rule, "@", "")
+            set search = rule_"."_baseName
+            set searchL = rule_"."_baseNameL
+            set searchT = rule_"."_baseNameT
+            set searchU = rule_"."_baseNameU
+        }
+        
+        set def = ##class(%Dictionary.CompiledClass).%OpenId(search)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(searchL)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(searchT)
+        set:'$isobject(def) def = ##class(%Dictionary.CompiledClass).%OpenId(searchU)
+        
+        if $isobject(def) {
+            set id = ""
+            set methods = def.Methods
+            set idx = methods.Next()
+            while idx '= "" {
+                set method = methods.GetAt(idx)
+                if (method.Name = "run") & (method.ClassMethod = 1) {
+                    set id = def.Name
+                    quit ; gotcha!
+                }                        
+                set idx = methods.Next(idx)
+            }
+        }
+        quit:id'="" // got one, go!  
+        set idx = searchPattern.Next(idx)
+    }
+    
+    if id = "" {
+        return $STACK($STACK(-1)-1,"LOCATION") _ " " _ baseName_" can not be located."
+    }
+    
+    try {
+        set value = $classmethod(id, "run", parameters)
+    } catch exception {
+        set value = ..streamToString(..captureObjDump(exception))
+    }
+    
+    return value
+]]></Implementation>
+</Method>
+</Class>
+</Export>

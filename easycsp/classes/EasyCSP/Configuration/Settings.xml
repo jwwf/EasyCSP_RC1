@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:57">
+<Class name="EasyCSP.Configuration.Settings">
+<Description><![CDATA[
+<p>
+This table contains soft-setting switches for framework behavior. Settings are contained in an MV
+file in the EasyCSP workspace. Attribute (field) 1 is the description of what the setting does.
+All attributes from 2 on are the setting values.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%Persistent,EasyCSP.Model.MVBase</Super>
+<TimeChanged>64152,39523.850868</TimeChanged>
+<TimeCreated>63460,37667.361413</TimeCreated>
+
+<Parameter name="MVFILENAME">
+<Default>SETTINGS</Default>
+</Parameter>
+
+<Parameter name="MVREPOPULATE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="MVGLOBAL">
+<Type>%String</Type>
+<Default>SETTINGS</Default>
+</Parameter>
+
+<Parameter name="MVAUTOLOCK">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCLEARDICT">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCREATE">
+<Type>BOOLEAN</Type>
+<Default>1</Default>
+</Parameter>
+
+<Property name="settingKey">
+<Description>
+The name of the setting or the switch it affects.</Description>
+<Type>%String</Type>
+<SqlFieldName>setting_key</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="0"/>
+<Parameter name="MVHEADING" value="Setting Key"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="SETTING.KEY"/>
+<Parameter name="MVWIDTH" value="20"/>
+</Property>
+
+<Property name="description">
+<Description>
+Setting value</Description>
+<Type>%String</Type>
+<SqlFieldName>description</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="1"/>
+<Parameter name="MVHEADING" value="Description"/>
+<Parameter name="MVJUSTIFICATION" value="T"/>
+<Parameter name="MVNAME" value="DESCRIPTION"/>
+<Parameter name="MVWIDTH" value="60"/>
+</Property>
+
+<Property name="value">
+<Description>
+Setting value</Description>
+<Type>%String</Type>
+<SqlFieldName>value</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="2"/>
+<Parameter name="MVHEADING" value="Value"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="VALUE"/>
+<Parameter name="MVWIDTH" value="20"/>
+</Property>
+
+<Property name="affectedUser">
+<Description>
+This is the name of the setting to be affected.</Description>
+<Type>%String</Type>
+<Collection>list</Collection>
+<SqlFieldName>affected_user</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="3"/>
+<Parameter name="MVHEADING" value="Affected User"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="AFFECTED.USER"/>
+<Parameter name="MVWIDTH" value="20"/>
+</Property>
+
+<Property name="affectedGroup">
+<Description>
+If this is empty then the setting is system-wide. If it is not empty then the setting affects only the named group. If there is a user name
+in the idKey then this setting is used for the specifically-named user operating in any group. If both are not empty then the setting is used
+if the named user is operating in the named group.</Description>
+<Type>%String</Type>
+<Collection>list</Collection>
+<SqlFieldName>affected_group</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="4"/>
+<Parameter name="MVHEADING" value="Affected Group"/>
+<Parameter name="MVNAME" value="AFFECTED.GROUP"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="15"/>
+</Property>
+
+<Index name="indexSettingKey">
+<IdKey>1</IdKey>
+<PrimaryKey>1</PrimaryKey>
+<Properties>settingKey</Properties>
+</Index>
+
+<Method name="afterConstruct">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // These can be lengthy values
+    do ..setTrait("description", "textarea", 1)
+    do ..setTrait("value", "textarea", 1)
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="beforeValidation">
+<Description>
+A text box separates values with either lf or crlf. Change those back to value marks.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    affectedUser = @ME->getAttributeValue("settings_affecteduser")
+    @ME->setAttributeValue("settings_affecteduser", convert(@ME->crlf, @vm:@vm, affectedUser))
+    
+    affectedGroup = @ME->getAttributeValue("settings_affectedgroup")
+    @ME->setAttributeValue("settings_affectedgroup", convert(@ME->crlf, vm:@vm, affectedGroup))
+]]></Implementation>
+</Method>
+
+<Method name="validationRules">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // Indicate that each value in affected user and affected group 
+    // is a key in another file.
+    do ..setKeyOf("settings_affectedUser", "users")
+    do ..setKeyOf("settings_affectedGroup", "groups")
+    do ..addConverter("settings_affectedUser", "MVToHTML")
+    do ..addConverter("settings_affectedGroup", "MVToHTML")
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="getSetting">
+<Description><![CDATA[
+Find all keys with a switch named <i>settingName</i>. The values in %session
+govern which setting will be returned.]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>settingName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if $get(settingName) = "" quit ""
+    
+    if $get(%EasyCSPApp) '= "" {
+        set forGroup = %EasyCSPApp.sessionData.get("e")
+        set forUser = %EasyCSPApp.getSession("uid")
+    } else {
+        set forGroup = "" ; * site only
+        set forUser = "" ; * all
+    }
+    
+    // For a specific user in a specific group
+    set value = ..retrieveSetting(settingName, forUser, forGroup)
+    set:value="" value = ..retrieveSetting(settingName, forUser, "")
+    set:value="" value = ..retrieveSetting(settingName, "", forGroup)
+    set:value="" value = ..retrieveSetting(settingName, "", "")
+    
+    quit value
+]]></Implementation>
+</Method>
+
+<Method name="retrieveSetting">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>settingName,forUser="",forGroup=""</FormalSpec>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    do parameters.set("model", ..%ClassName(1))
+    do parameters.set("select", "value")
+    do parameters.set("top", 10)
+    
+    set query = ##class(EasyCSP.SQL.Query).%New(parameters)
+    
+    do query.addCondition("setting_key", "=", settingName)
+    
+    if $mvoconv(forGroup,"MCL") = "site" set forGroup = ""
+    if $mvoconv(forUser,"MCL") = "guest"  set forUser = ""
+    
+    do:forGroup'="" query.addCondition("affected_group", "=", forGroup)
+    do:forUser'="" query.addCondition("affected_user", "=", forUser)
+    
+    set rset = query.getRecordset()
+        
+    if $get(rset) = "" return "" ; * no records found
+    
+    set sc = rset.%Next()
+    
+    if sc = 0 return "" ; such a setting was not found
+    
+    return rset.%Get("value")
+]]></Implementation>
+</Method>
+
+<Method name="search">
+<Description>
+Override the default (non-functioning) search() method. Each controller should set the rules
+for who can access what in the database.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set querant = %EasyCSPApp.getSession("uid")
+    quit:querant="guest" ""
+    
+    quit ..searchBySQL(parameters)
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^SETTINGS</DataLocation>
+<DefaultData>SettingsDefaultData</DefaultData>
+<IdLocation>^C.SETTINGS</IdLocation>
+<IndexLocation>^I.SETTINGS</IndexLocation>
+<StreamLocation>^S.SETTINGS</StreamLocation>
+<ExtentSize>100000</ExtentSize>
+<Data name="SettingsDefaultData">
+<Value name="1">
+<Value>description</Value>
+</Value>
+<Value name="2">
+<Value>value</Value>
+</Value>
+<Value name="3">
+<Value>affectedUser</Value>
+</Value>
+<Value name="4">
+<Value>affectedGroup</Value>
+</Value>
+<Value name="5">
+<Value>columnLabels</Value>
+</Value>
+<Value name="6">
+<Value>columnNames</Value>
+</Value>
+<Value name="7">
+<Value>finderMap</Value>
+</Value>
+<Value name="8">
+<Value>modelClass</Value>
+</Value>
+<Value name="9">
+<Value>sqlMetadata</Value>
+</Value>
+<Value name="10">
+<Value>sqlTableName</Value>
+</Value>
+<Value name="11">
+<Value>shortName</Value>
+</Value>
+<Value name="12">
+<Value>modelId</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+</Export>

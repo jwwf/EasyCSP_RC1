@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:40">
+<Class name="EasyCSP.Web.Widget.Sortable">
+<Description>
+Display a sortable widget. Pass in a flag indicating whether the list will be ordered, 
+an array of key-value pairs for display, the destination for a form submit to return the 
+new list order, and a destination for the user to cancel the operation. Script
+emission is automatic. 
+
+@param boolean $ordered - use ul or ol as the list type.
+
+@param array  $keyValuePairs An array of key-value pairs, generally a record id as key and a 
+value to display.
+
+@param string $submitAction The URL where the form will post 
+the new order. The order is presented as a comma-separated
+list of keys (the id's from the $keyValuePairs array) in the new order the items 
+are to appear in.
+
+@param string $onCancel The link to return to if the user decides 
+to cancel rather than to submit changes
+
+ON POST: the sorted key array is in "neworder"</Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64110,31065.017999</TimeChanged>
+<TimeCreated>64088,30043.48984</TimeCreated>
+
+<Method name="run">
+<FormalSpec>ordered:%Boolean=0,keyValuePairs:EasyCSP.Core.ParameterList,submitAction:%String="",onCancel:%String=""</FormalSpec>
+<Implementation><![CDATA[
+
+    set htmlOptions = ##class(EasyCSP.Core.ParameterList).%New()
+    
+    if (ordered = 0) {
+        set listType = "ul"
+    } else { 
+        set listType ="ol"
+    }
+
+    if ($get(keyValuePairs) = "") {
+        do htmlOptions.set("class", "notice")
+        do ..tag("p", htmlOptions, "sortWidget: keyValuePairs is empty!", 1)
+        quit 0
+    }
+
+    if ($get(submitAction) = "") {
+        do htmlOptions.set("class", "notice")
+        do ..tag("p", htmlOptions, "sortWidget: return action is missing!", 1)
+        quit 0
+    }
+
+    do ..tag("p", "", "Drag and drop items into the order you want them to be. Press ""Reorder"" to have the system apply the new order.")
+    do htmlOptions.set("class", "notice")
+    do htmlOptions.set("id", "message")
+    do ..tag("p", htmlOptions, "", 1)
+
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("width", "100%")
+    do ..openTag("div", htmlOptions)
+
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("class", "sortable inline row sort-table")
+    do htmlOptions.set("id", "sortWidget")
+    do ..openTag(listType, htmlOptions)
+    
+    set list = keyValuePairs.getAll()
+    set key = list.Next()
+    do htmlOptions.unsetAll()
+    while key '= "" {
+        do htmlOptions.set("id", key)
+        do ..tag("li", htmlOptions, list.GetAt(key), 1)
+    }
+
+    do ..closeTag(listType)
+
+    do ..closeTag("div")
+
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("class", "controlGroupSpacer")
+    do ..tag("p", htmlOptions)
+
+    // Add a button to cause the reordering
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("style", "width:100%;list-style-type: none;")
+    do htmlOptions.set("class", "inline row")
+    do ..openTag("ul", htmlOptions)
+
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("id", "page-form")
+    do ..beginForm(submitAction, "POST", htmlOptions)
+    do htmlOptions.set("id", "neworder")
+    do ..hiddenField("neworder", "", htmlOptions)
+
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("class", "fleft")
+    do ..openTag("li", htmlOptions)
+    
+    set buttonLabel = "Reorder"
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("class", "blue")
+    do htmlOptions.set("id", "dosubmit")
+    do htmlOptions.set("name", "dosubmit")
+    do htmlOptions.set("style", "float: left; margin: 10px")
+    do htmlOptions.set("value", "buttonLabel")
+    do ..tag("button", htmlOptions, buttonLabel, 1)
+    do ..closeTag("li")
+
+    do ..endForm()
+
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("class", "fright")
+    do ..openTag("li", htmlOptions)
+    do ..link("Cancel and return without reordering", onCancel)
+    do ..closeTag("li")
+
+    set sortScript = ..crlf _
+    "$(""#sortWidget"").sortable({" _
+    "   opacity: 0.6," _ ..crlf _
+    "   items: 'li'," _ ..crlf _
+    "   cursor: 'move'," _ ..crlf _
+    "   scrollSensitivity: 40," _ ..crlf _
+    "   update: function () {" _ ..crlf _
+    "      $('#message').html('Changes not saved');" _ ..crlf _
+    "   }" _ ..crlf _
+    "}).disableSelection();" _ ..crlf _ ..crlf _
+    "$(""#dosubmit"").click(function () {" _ ..crlf _
+    "   var result = $(""#sortWidget"").sortable(""toArray"");" _ ..crlf _
+    "   $(""#neworder"").val(result);" _ ..crlf _
+    "   $(""#page-form"").submit();" _ ..crlf _
+    "}" _ ..crlf _
+    ");"
+    do %EasyCSPApp.controller.layout.scripting.registerScript("sortable", sortScript, $Parameter("EasyCSP.Web.Client.Scripts", "posEnd"))
+]]></Implementation>
+</Method>
+</Class>
+</Export>

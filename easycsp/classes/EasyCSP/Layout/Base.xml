@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:14">
+<Class name="EasyCSP.Layout.Base">
+<Description><![CDATA[
+<p>
+All EasyCSP layouts must inherit from this base class. There are facilities
+in this class that controllers, layouts, and views all depend on.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Abstract>1</Abstract>
+<Super>EasyCSP.Core.Component,EasyCSP.Rendering.HTML</Super>
+<TimeChanged>64140,71072.743552</TimeChanged>
+<TimeCreated>63542,38710.0489</TimeCreated>
+
+<Property name="bodyStream">
+<Type>%GlobalCharacterStream</Type>
+<Final>1</Final>
+<Private>1</Private>
+</Property>
+
+<Property name="bodyOpen">
+<Type>%Boolean</Type>
+<Final>1</Final>
+<InitialExpression>0</InitialExpression>
+<Private>1</Private>
+</Property>
+
+<Property name="breadcrumbs">
+<Type>%String</Type>
+<Collection>array</Collection>
+</Property>
+
+<Property name="data">
+<Type>EasyCSP.Core.HashArray</Type>
+<Final>1</Final>
+<Private>1</Private>
+</Property>
+
+<Property name="formId">
+<Type>%String</Type>
+<InitialExpression>"default"</InitialExpression>
+</Property>
+
+<Property name="headOpen">
+<Type>%Boolean</Type>
+<Final>1</Final>
+<InitialExpression>0</InitialExpression>
+<Private>1</Private>
+</Property>
+
+<Property name="headStream">
+<Type>%GlobalCharacterStream</Type>
+<Final>1</Final>
+<Private>1</Private>
+</Property>
+
+<Property name="pageTitle">
+<Type>%String</Type>
+</Property>
+
+<Property name="scripting">
+<Type>EasyCSP.Web.Client.Scripts</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="view">
+<Type>EasyCSP.Views.Base</Type>
+</Property>
+
+<Parameter name="docType">
+<Description>
+Default to html 5</Description>
+<Type>%String</Type>
+<Default><![CDATA[<!DOCTYPE html>]]></Default>
+</Parameter>
+
+<Parameter name="htmlTag">
+<Type>%String</Type>
+<Default><![CDATA[<html class="no-js" lang="en">]]></Default>
+</Parameter>
+
+<Method name="%OnNew">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set ..headStream = ##class(%GlobalCharacterStream).%New()
+    
+    set ..bodyStream = ##class(%GlobalCharacterStream).%New()
+    
+    do ..stream.Clear() // this is a temp stream for rendering
+    
+    set:'..instanceOf("HashArray", parameters) ..data = ##class(EasyCSP.Core.HashArray).%New()
+    
+    do ..data.copyFrom(parameters) ; move parameter data into a property -- this may not be necessary any longer
+    
+    // Allow apps to pass in scripting.
+    if parameters.get("scripting") = "" {
+        set ..scripting = ##class(EasyCSP.Web.Client.Scripts).%New()
+    } else {
+        set ..scripting = parameters.get("scripting")
+    }
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="addBodyContent">
+<Final>1</Final>
+<FormalSpec>data:%String</FormalSpec>
+<Implementation><![CDATA[
+    if '..bodyOpen {
+        do ..beginBodyContent()
+    }
+    
+    do ..bodyStream.WriteLine(data)
+]]></Implementation>
+</Method>
+
+<Method name="addBodyStreamContent">
+<Final>1</Final>
+<FormalSpec>data:%GlobalCharacterStream</FormalSpec>
+<Implementation><![CDATA[
+    if '..bodyOpen {
+        do ..beginBodyContent()
+    }
+    
+    do ..bodyStream.MoveToEnd()
+    do ..bodyStream.CopyFrom(data)
+]]></Implementation>
+</Method>
+
+<Method name="addHeadContent">
+<Final>1</Final>
+<FormalSpec>data:%String</FormalSpec>
+<Implementation><![CDATA[
+    if '..headOpen {
+        do ..beginHeadContent()
+    }
+        do ..headStream.WriteLine(data)
+]]></Implementation>
+</Method>
+
+<Method name="addHeadStreamContent">
+<Final>1</Final>
+<FormalSpec>data:%GlobalCharacterStream</FormalSpec>
+<Implementation><![CDATA[
+    do ..headStream.MoveToEnd()
+    do ..headStream.CopyFrom(data)
+]]></Implementation>
+</Method>
+
+<Method name="beginBodyContent">
+<Description>
+Create a new output headStream if one doesn't exist. Do not disturb existing
+page output if such has already been added to the headStream.</Description>
+<FormalSpec>htmlOptions:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    
+    do ..bodyStream.MoveToEnd()
+    do ..bodyStream.CopyFrom(..scripting.renderAt($parameter("EasyCSP.Web.Client.Scripts", "posBegin")))
+    
+    if '..instanceOf(htmlOptions, "HashArray") set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    do ..bodyStream.WriteLine(..tag("body", htmlOptions, 0, 0))
+    
+    do ..bodyStream.MoveToEnd()
+    do ..bodyStream.CopyFrom(..scripting.renderAt(##class(EasyCSP.Web.Client.Scripts).%GetParameter("posLoad")))
+    do ..bodyStream.MoveToEnd()
+    do ..bodyStream.CopyFrom(..scripting.renderAt($parameter("EasyCSP.Web.Client.Scripts", "posLoad")))
+    
+    set ..bodyOpen = 1
+]]></Implementation>
+</Method>
+
+<Method name="beginHeadContent">
+<Description>
+Create a new output headStream if one doesn't exist. Do not disturb existing
+page output if such has already been added to the headStream.</Description>
+<Implementation><![CDATA[
+    
+    do:'..headOpen ..headStream.WriteLine(..tag("head", "", 0, 0))
+    
+    set ..headOpen = 1
+]]></Implementation>
+</Method>
+
+<Method name="copyHeadStreamContent">
+<Final>1</Final>
+<Implementation><![CDATA[
+    do ..headStream.MoveToEnd()
+    do ..stream.Rewind()
+    do ..headStream.CopyFrom(..stream)
+    //do ..stream.Clear()
+]]></Implementation>
+</Method>
+
+<Method name="endBodyContent">
+<Description><![CDATA[
+<p>
+Closes the <body> tag and rewinds the stream to the beginning.
+Only update the body during the body-build processes. Attempts to
+add content or scripting to the body stream before the body
+stream is created or after the </body> end-tag has been emitted
+will quietly be ignored. The solution is to add body scripting
+or content only during the body-building phase.
+</p>]]></Description>
+<Implementation><![CDATA[
+    do:'..bodyOpen ..beginBodyContent()
+    do ..bodyStream.MoveToEnd()
+    do ..bodyStream.CopyFrom(..scripting.renderScripts($parameter("EasyCSP.Web.Client.Scripts", "posEnd")))    
+    do ..bodyStream.MoveToEnd()
+    do ..bodyStream.CopyFrom(..scripting.renderScriptFiles(##class(EasyCSP.Web.Client.Scripts).%GetParameter("posEnd")))
+    do ..bodyStream.MoveToEnd()
+    do:..bodyOpen ..bodyStream.WriteLine("</body>")
+    do ..bodyStream.MoveToEnd()
+    do ..bodyStream.CopyFrom(..scripting.renderScripts($parameter("EasyCSP.Web.Client.Scripts", "posReady")))    
+    do ..bodyStream.MoveToEnd()
+    do ..bodyStream.CopyFrom(..scripting.renderScriptFiles(##class(EasyCSP.Web.Client.Scripts).%GetParameter("posReady")))
+
+    do ..bodyStream.MoveToEnd()
+    
+    do ..bodyStream.WriteLine("</html>")
+    do ..bodyStream.Rewind()
+    set ..bodyOpen = 0
+]]></Implementation>
+</Method>
+
+<Method name="endHeadContent">
+<Implementation><![CDATA[
+    try {
+        
+        do ..headStream.MoveToEnd()
+        do ..copyHeadStreamContent()
+        do ..headStream.MoveToEnd()
+        do ..headStream.CopyFrom(..scripting.renderAt(##class(EasyCSP.Web.Client.Scripts).%GetParameter("posHead")))
+        do:..headOpen ..headStream.WriteLine("</head>")
+        
+        do ..headStream.Rewind()
+        set ..headOpen = 0
+    } catch theException {
+        throw theException
+    }
+]]></Implementation>
+</Method>
+
+<Method name="render">
+<Description><![CDATA[
+<p>
+Combine the output gathered into the various page segment
+streams into one output flow. Script output is handled in
+the various segments and will be output at the appropriate
+stage in rendering.
+</p>]]></Description>
+<Final>1</Final>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    
+    if ..headOpen {
+        do ..endHeadContent()
+    }
+    
+    if ..bodyOpen {
+        do ..endBodyContent()
+    }
+    
+    do %EasyCSPApp.controller.renderedPage.MoveToEnd()
+    do %EasyCSPApp.controller.renderedPage.WriteLine(..#docType)
+    do %EasyCSPApp.controller.renderedPage.WriteLine(..#htmlTag)
+    do %EasyCSPApp.controller.renderedPage.CopyFrom(..headStream)
+    
+    do %EasyCSPApp.controller.renderedPage.MoveToEnd()
+    do %EasyCSPApp.controller.renderedPage.CopyFrom(..bodyStream)
+    
+    //do %EasyCSPApp.renderedPage.Rewind()
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

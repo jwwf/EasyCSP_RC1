@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:15">
+<Class name="EasyCSP.Layout.Layouts.Default">
+<Description><![CDATA[
+<p>
+Default layout. Extend this class or create your own layout to provide your site's
+custom look and feel.
+
+<p>
+The only required classmethod is "run()". When a controller calls the base class render() function,
+render searches for the run() method in the layout and passes in a MVFFramework.Core.ParameterList
+minimally containing an image of the controller object and as many table models as will be required.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Layout.Base</Super>
+<TimeChanged>64145,34157.896737</TimeChanged>
+<TimeCreated>63481,36812.042056</TimeCreated>
+
+<Method name="run">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set controller = ..data.get("controller")
+    set:controller="" controller = %EasyCSPApp.controller
+    
+    if $get(controller)'["Controller" {
+        do ..SetCondition(404,"Missing the controller name that should have been passed to "_$classname()_".")
+        quit 0
+    }
+    
+    // Nothing but the page scaffolding gets displayed without a view. The view
+    // is responsible for putting content into a page.
+    set view = ""
+    set viewBaseClassname = parameters.get("view")
+    do ..data.unset("view")
+    
+    set view = ##class(EasyCSP.Core.Component).objectFactory(viewBaseClassname, "view", 1, parameters)
+    
+    set ..view = view
+    
+    set viewId = $get(view)
+    
+    // start an output buffer
+    do ..beginHeadContent()
+    
+    /*
+    * Doctype, beginning <html> tag, and <head></head> section
+    */
+    
+    do ..metaTag("text/html; charset=utf-8", "", "Content-Type")
+    do ..metaTag("en", "language", "")
+    do ..metaTag("IE=Edge,chrome=1", "", "X-UA-Compatible")
+    
+    // Combine a few css classes together for streamlined code
+    // Add this in after CSS is loaded
+    do ..scripting.registerScriptFile("tidy","tidyAtEnd.js", ..scripting.%GetParameter("posLoad"))
+    
+    // head: core scripts -- add these to baseJS.cls if needed. NOTE: be careful to note dependencies in
+    // the addPackage call. Dependencies will automatically be loaded ahead of the requested script.
+    do ..scripting.registerCoreScript("bootstrap")    
+    do ..scripting.registerCoreScript("maskedinput")    
+    do ..scripting.registerCoreScript("head")    
+    do ..scripting.registerCoreScript("modernizer")    
+    do ..scripting.registerCoreScript("prepareTransition")    
+    do ..scripting.registerCoreScript("jqueryui")    
+    do ..scripting.registerCoreScript("jqueryuiAutocomplete")    
+    do ..scripting.registerCoreScript("main")
+    do ..scripting.registerCoreScript("validation")
+    do ..scripting.registerCoreScript("impromptu")
+    
+    
+    
+    /*
+    *  Body and content. The head section will be closed at the end of the
+    *  page building process. That allows views to add CSS and scripting
+    *  as they might need. The required scripting is already queued and if
+    *  for some reason the view repeats the need for a script, it won't be
+    *  duplicated in the page.
+    */
+    
+    do ..beginBodyContent()
+    
+    do ..addBodyContent("<div id=""page-wrapper"">")
+    
+    // Here is an appropriate place to add a menu widget if one
+    // is desired. This section builds the logo and page heading
+    // portion.            
+        
+    do ..addBodyContent("        <div class=""page-container"" id=""page-block"">")
+    
+    // Set up come kind of a heading for demo
+    do ..addBodyContent("            <div class=""header"">")
+    do ..addBodyContent("               <table width=""100%""><tr>")
+    do ..addBodyContent("               <td><img src=""images/EasyCSP-sm.jpg"" style=""text-align: left;"" alt=""Easy CSP"" /></td>")
+    do ..addBodyContent("               <td style=""text-align: right;""><h1>Easy CSP Framework</h1></td>")
+    do ..addBodyContent("               </tr>")
+    do ..addBodyContent("               <tr>")
+    do ..addBodyContent("               <td></td>")
+    do ..addBodyContent("               <td style=""text-align: right;"">")
+    if %EasyCSPApp.users.getAttribute("firstname") '= "" {
+        do ..addBodyContent("Welcome " _ %EasyCSPApp.users.getAttributeValue("firstname") _ " " _ %EasyCSPApp.users.getAttributeValue("surname") _ " ")
+    }
+    do ..addBodyContent(..routeLink("Home","site/index")_" | "_..routeLink("Log Out", "site/logout"))
+    do ..addBodyContent("               </td>")
+    do ..addBodyContent("               </tr></table>")
+    do ..addBodyContent("            </div>")
+    
+    // The content divs are set up. The endpoint view class will put the content here.
+    
+    quit:$get(%EasyCSPException)'="" 1 // let the controller dispatch exception display
+    
+    
+    // If a view uses a user call or a widget that has a problem in it
+    // keep the system from dying by adding try/catch here, passing the
+    // exception object upward. The controller base class has a mechanism
+    // for catching and displaying exception information.
+    set hasError = 0
+    try {
+        set view.data = ..data
+        set view.errors = ..errors
+        do ..view.run(parameters)
+        if ..view.pageTitle = "" set view.pageTitle = $classname(view)
+        do ..addContent(..tag("title", "", ..view.pageTitle, 1))
+    } catch %EasyCSPException {
+    }
+    
+    quit:$get(%EasyCSPException)'="" 1 // let the controller dispatch exception display
+    
+    // If something happens whilst rendering the view, the exception will be
+    // caught here and passed back to the controller for display.
+    try {   
+        do ..addBodyStreamContent(..view.render())
+    } catch %EasyCSPException {
+    }
+    
+    // If there is information in the controller's debug stream, output that here. A
+    // controller extent can not write output to a view.
+    if controller.debugInfo.Size > 0 {
+        set options = ##class(EasyCSP.Core.HashArray).%New()
+        do options.set("id", "debug-block")
+        do ..addBodyContent("<div id=""debug-block"">")
+        do ..addBodyStreamContent(controller.debugInfo)
+        do ..closeTag("</div>")
+    }
+    
+    quit:$get(%EasyCSPException)'="" 1 // let the controller dispatch exception display
+
+    // Close this layout's div tags.
+    do ..addBodyContent("    </div>")
+    do ..addBodyContent("</div>")
+    
+    // Hook up the jquery tooltip prettifier. Model classes automatically create
+    // tooltip information from the property descriptions. The DocBook "///" comment
+    // publishes documentation information to the class description. That description
+    // is farmed by EasyCSP to create attributes.
+    set tooltipScript = "$( function() {" _ ..crlf _
+        "   $( document ).tooltip();" _ ..crlf _
+        "} );"
+    
+    // Output the end-position scripting. If the view added requests for script
+    // call-ins, those will be processed here as well.
+    set endPos = ..scripting.%GetParameter("posEnd")
+    do ..scripting.registerScript("tooltips", tooltipScript, endPos, 1)
+    
+    
+    /*
+    *  End of body content and page
+    */
+    
+    // The default css goes last. The site CSS has the final say on styling. This
+    // allows local CSS to override or replace any styling the scripting may add.
+    do ..scripting.addAndEnqueueCSSPackage("default", "css/default.css", "jquery")
+        
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

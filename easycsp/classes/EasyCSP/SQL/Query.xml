@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:25">
+<Class name="EasyCSP.SQL.Query">
+<Description><![CDATA[
+Compose a SQL query.
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>64146,62507.432552</TimeChanged>
+<TimeCreated>63762,62143.077686</TimeCreated>
+
+<Property name="columnCount">
+<Type>%Integer</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="columns">
+<Type>%ArrayOfDataTypes</Type>
+</Property>
+
+<Property name="conditions">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Property name="id">
+<Type>%String</Type>
+</Property>
+
+<Property name="idColumn">
+<Type>%String</Type>
+</Property>
+
+<Property name="idColumnLabel">
+<Type>%String</Type>
+</Property>
+
+<Property name="inConditions">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Property name="model">
+<Type>%DataType</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="modelType">
+<Type>%String</Type>
+<InitialExpression>"model"</InitialExpression>
+<Private>1</Private>
+</Property>
+
+<Property name="noRemap">
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="select">
+<Type>EasyCSP.SQL.Select</Type>
+</Property>
+
+<Property name="sortOrder">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Property name="tableName">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="top">
+<Type>%Integer</Type>
+<InitialExpression>10000</InitialExpression>
+</Property>
+
+<Method name="%OnNew">
+<Description>
+Supply the class name for the model factory to instantiate as parameters("modelName"). 
+The identifier must be for a class that extends "...Model..." (plain %Persistent or MV model).
+To set the list of columns for the select, supply "select" in parameters as a comma-
+delimited string.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    set modelName = parameters.get("model")
+    quit:$get(modelName)="" $$$ERROR("Supply a model class name in the parameters.")
+    set ..noRemap = +parameters.get("noRemap")
+    
+    try {
+        set ..model = ..objectFactory(modelName, "model") // locate and instantiate a model of the requested class
+    } catch junk {
+        // Some tables might not be modeled
+    }
+    
+    /// It's not an EasyCSP model. Is it some other SQL table?
+    if '$isObject(..model) {
+        try {
+            set ..model = $classmethod(modelName, "%New")
+        } catch nothing {
+            set ..model = ""
+        }
+    }
+    
+    if ($get(i%model)["Model.Models") ! ($get(i%model)["Settings") {
+        set ..modelType = "model"
+        set PK = ..model.PK
+        set PKAtb = ..model.getAttribute(PK)
+        set ..idColumn = PKAtb.sqlFieldName
+        set ..idColumnLabel = PKAtb.label
+        set ..tableName = ..model.SqlTableName
+    }
+    
+    quit:'$isObject(..model) $$$ERROR("Can not locate a model class named """_modelName_""".")
+    
+    set ..tableName = ..model.SqlTableName
+    
+    set ..top = +parameters.get("top")
+    set:..top=0 ..top = +##class(EasyCSP.Configuration.Settings).getSetting("maxRecordsReturned")
+    set:..top=0 ..top = 10000
+    
+    // If there are any pre-query setups to be done (for instance, to reformat multivalue data)
+    // then run those before any further model processing.
+    do:..model.hasMethod("beforeQuery") ..model.beforeQuery()
+    
+    // Set up a default select. This can be overridden later if desired.
+    set ..select = ##class(EasyCSP.SQL.ModelSelect).%New(..model, parameters.get("select"))
+    
+    set ..conditions = ##class(EasyCSP.Core.Array).%New()
+    set ..inConditions = ##class(EasyCSP.Core.Array).%New()
+    set ..sortOrder = ##class(EasyCSP.Core.Array).%New()
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="addCondition">
+<FormalSpec>column:%String="",comparitor:%String="=",value:%String="",partialMatch:%Boolean=0</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set condition = ##class(EasyCSP.SQL.Condition).%New(column, comparitor, value, partialMatch)
+    do:$isobject(condition) ..conditions.append(condition)
+]]></Implementation>
+</Method>
+
+<Method name="addInCondition">
+<FormalSpec>column:%String="",values:EasyCSP.Core.Array=""</FormalSpec>
+<Implementation><![CDATA[
+    set inCondition = ##class(EasyCSP.SQL.InCondition).%New(column, values)
+    do ..inConditions.append(inCondition)
+]]></Implementation>
+</Method>
+
+<Method name="getRecordset">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%SQL.StatementResult</ReturnType>
+<Implementation><![CDATA[
+    
+    set query = ##class(%SQL.Statement).%New()
+    set qStatus = query.%Prepare(..statement(parameters))
+    quit:qStatus'=1 ""
+    set ..columnCount = query.%Metadata.columnCount
+    set ..columns = query.%Metadata.columns
+    quit query.%Execute()
+]]></Implementation>
+</Method>
+
+<Method name="execute">
+<Description><![CDATA[
+This function runs a query in the background. The concept was lifted from Gio Ciampa's
+report generators. This allows long queries to run whilst making the progress during compilation
+available to AJAX queries from a web page. To make it much simpler to build HTML tables
+or grids on the fly, rows are stored as $LISTs in ^queryOut(<i>jobnumber</i>, "rows", <i>rownumber</i>).
+This makes it possible to make pageable grid displays. (See EasyCSP.CHTML.Table)]]></Description>
+<Final>1</Final>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>queryId</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // Retrieve the execution parameters from the query object
+    set columnsString = ^queryOut(queryId, "columns")
+    set columns = ##class(EasyCSP.Core.Array).%New()
+    do columns.split(columnsString, $mvfm)
+    
+    set labels = ##class(EasyCSP.Core.Array).%New()
+    do labels.split(^queryOut(queryId, "columnLabels"), $mvfm)
+    
+    set numberOfColumns = labels.length()
+    
+    set sql = ^queryOut(queryId, "sql")
+    
+    // Save them for analysis or reuse
+    set ^queryOut(queryId, "process_begin") = $now()
+    set ^queryOut(queryId, "pid") = $j
+    set ^queryOut(queryId, "ppid") = $ZPARENT
+    
+    set query = ##class(%SQL.Statement).%New()
+    set qStatus = query.%Prepare(sql)
+    
+    if qStatus '= 1 {
+        set sqlError = $SYSTEM.Status.GetErrorText(qStatus)
+        set ^queryOut(queryId,"status") = "Could not prepare SQL statement. Statement was: "_sql_" -- Error was: "_sqlError
+        set ^queryOut(queryId, "process_end") = $now()
+        quit ""
+    }
+    
+    set ^queryOut(queryId,"status") = "Executing"
+    set recordSet = query.%Execute()
+    
+    set ^queryOut(queryId, "code") = recordSet.%SQLCODE
+    set ^queryOut(queryId,"rowCount") = 0
+    
+    set ^queryOut(queryId,"status") = "Compiling"
+    while recordSet.%Next()
+    {
+        quit:$get(^queryOut(queryId,"uicommand"))="stop"
+        set mvRow = ""
+        set rowNumber = ^queryOut(queryId,"rowCount") + 1
+        set ^queryOut(queryId,"rowCount") = rowNumber
+        for idx = 1:1:numberOfColumns
+        {
+            set label = labels.get(idx)
+            set ^queryOut(queryId,"rows",rowNumber, label) = recordSet.%GetData(idx)
+        }
+        
+    }
+    
+    set ^queryOut(queryId, "process_end") = $now()
+    set ^queryOut(queryId,"status") = "Complete"
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="orderBy">
+<Description><![CDATA[
+Add an ORDER BY clause to the query. The column names must be the
+SQL column names. (You can examine the ..columnNames property for
+a list when the query is created.) The list is a comma-separated
+string. White space is stripped from the beginning and ending of
+each element so white space can be used in code for readability.
+For example: <code>query.orderBy("name, last_update DESC")</code>.]]></Description>
+<FormalSpec>sortOrder:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+
+    set sortList = ..listFromString(sortOrder)
+    set sortOrder = $listToString(sortList, $mvfm)
+    set columns = ##class(EasyCSP.Core.Array).%New()
+    do columns.split(sortOrder, $mvfm)
+    do ..sortOrder.appendFrom(columns)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="run">
+<Description>
+Run the query by jobbing it off in the background.</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    // Assign a unique ID to this query
+    set uid = %EasyCSPApp.uid
+    set:uid="" uid="guest"
+    set remoteAddr = %EasyCSPApp.getCGI("REMOTE_ADDR")
+    set gmt = ..getUniversalTime()
+    set hash = ##class(EasyCSP.Conversions.MD5String).run(remoteAddr_gmt)
+    set ..id = uid_"*"_hash
+    
+    kill ^queryOut(..id)
+    
+    // Retrieve the execution parameters from the query object
+    set queryId = ..id
+    set sql = ..statement()
+    
+    kill ^queryOut(queryId)
+    
+    // Save them for analysis or reuse. The report-page builder uses some of
+    // this information for populating table information.
+    set ^queryOut(queryId, "attributes") = ..select.attributes.join($mvfm)
+    set ^queryOut(queryId, "columnLabels") = ..select.columnLabels.join($mvfm)
+    set ^queryOut(queryId, "columns") = ..select.columnNames.join($mvfm)
+    set ^queryOut(queryId, "controller") = %EasyCSPApp.controller.id
+    set ^queryOut(queryId, "idColumn") = ..idColumn
+    set ^queryOut(queryId, "idColumnLabel") = ..idColumnLabel
+    set ^queryOut(queryId, "process_request_time") = $now()
+    set ^queryOut(queryId, "pid") = $j
+    set ^queryOut(queryId, "ppid") = $ZPARENT
+    set ^queryOut(queryId, "sql") = sql
+    set ^queryOut(queryId, "tableName") = ..tableName
+    
+    job ##class(EasyCSP.SQL.Query).execute(queryId)
+]]></Implementation>
+</Method>
+
+<Method name="statement">
+<Description>
+Build and return the statement produced with the current query
+configuration. This allows a statement to be examined and the
+plan changed before execution.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set statement = "SELECT " 
+    set statement = statement _ " TOP " _ ..top 
+    set statement = statement _ " " _  ..select.render(..noRemap)
+    set statement = statement _ " FROM " _ ..tableName
+    
+    if ..conditions.length() > 0 {
+        set where = ##class(EasyCSP.Core.Array).%New()
+        set idx = ..conditions.Next()
+        while idx '= "" {
+            do where.append(..conditions.get(idx).toString())
+            set idx = ..conditions.Next(idx)
+        }
+        
+        set statement = statement _ " WHERE " _ where.join(" AND ")
+    }
+    
+    set:..sortOrder.length()>0 statement = statement _ " ORDER BY " _ ..sortOrder.join(", ")
+    
+    quit statement
+]]></Implementation>
+</Method>
+</Class>
+</Export>

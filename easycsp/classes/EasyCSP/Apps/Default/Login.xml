@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:55">
+<Class name="EasyCSP.Apps.Default.Login">
+<Description><![CDATA[
+A pseudo record for a user login form.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Apps.Base</Super>
+<TimeChanged>64150,80002.780485</TimeChanged>
+<TimeCreated>64129,29917.656717</TimeCreated>
+
+<Method name="recordModels">
+<Description>
+The forms model superclass allows record models to be added immediately
+during its "OnNew" construct phase. Record models can be added at any 
+time but this allows for some neat organization. </Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    do ..addModel("Users")
+    do ..addModel("UserShadow")
+    
+    // Hide all the attributes. A login page only needs username and password.
+    // Those live in different files/tables/models.
+    set nextModel = ..models.Next()
+    while nextModel '= "" {
+    
+        set model = ..models.get(nextModel)
+        set atbnames = model.getAttributeFinders()
+        
+        set nextAtb = atbnames.Next()
+        while nextAtb '= "" {
+            if (nextAtb'="users_username")&(nextAtb'="usershadow_password") {
+                do model.setTrait(nextAtb, "nodisplay", 1)
+            } else {
+                do model.unsetTrait(nextAtb, "nodisplay")
+            }
+            set nextAtb = atbnames.Next(nextAtb)
+        }
+        
+        set nextModel = ..models.Next(nextModel)
+    }
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="login">
+<Description>
+Log a known user into the system. The model attributes must be loaded prior to calling
+this method.</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    do ..clearAll()
+    
+    do ..toggleDebug(0)
+    do:+$get(%EasyCSPDebugging)=1 ..debugDump(%EasyCSPApp.requestData)  
+    
+    // User names are stored in lower case. OWASP best practice: user names are case insensitive.
+    // The standard login form prevents submission with either an empty user name or password.
+    // Check again in case someone is trying to penetrate.
+    set userName = $mvoconv(%EasyCSPApp.getRequestData("users_username"), "MCL")
+    if userName = "" {
+        do ..addError("users_username", "Please enter a valid user name.")
+        quit 0
+    }
+    
+    do:%EasyCSPDebugging %EasyCSPApp.controller.debugInfo.WriteLine("<pre>Find users by identifier '"_userName_"'</pre>")
+    set users = ##class(EasyCSP.Model.Models.Users).findByIdentifier(userName)
+    
+    do:%EasyCSPDebugging %EasyCSPApp.controller.debugInfo.CopyFrom(..captureObjDump(users))
+
+    if '..instanceOf(users, "Models.Users") {
+        do ..addError("users_username","Incorrect user name or password.")
+        quit 0
+    }
+    
+    // The user exists. Load the records into the framework. If the rest of
+    // validation fails, these will be dropped anyway.
+    set userKey = users.recordId
+    do %EasyCSPApp.users.read(userName) ;
+    
+    
+    do:%EasyCSPDebugging %EasyCSPApp.controller.debugInfo.WriteLine("<pre>Model Users</pre>")
+    do:%EasyCSPDebugging %EasyCSPApp.controller.debugInfo.CopyFrom(..captureObjDump(%EasyCSPApp.users))
+    
+    //set userShadow = %EasyCSPApp.userShadow
+    do %EasyCSPApp.userShadow.read(userName)
+    
+    
+    do:%EasyCSPDebugging %EasyCSPApp.controller.debugInfo.WriteLine("<pre>Model User Shadow</pre>")
+    do:%EasyCSPDebugging %EasyCSPApp.controller.debugInfo.CopyFrom(..captureObjDump(%EasyCSPApp.userShadow))
+    
+    // Find the soft-suspend values in case they're needed.
+    set attemptsBeforeSoftSuspend = +##class(EasyCSP.Configuration.Settings).getSetting("attemptsBeforeSoftSuspend")
+    set softSuspendTime = +##class(EasyCSP.Configuration.Settings).getSetting("softSuspendTime")
+    set utcNow = ..getUniversalTime()
+    set softSuspendUntil = utcNow + (60 * softSuspendTime)
+    
+    set upassword = %EasyCSPApp.userShadow.getAttributeValue("usershadow_password")
+    
+    // Encrypt the password from the web page. Does the result match what's in the shadow table?
+    set pw = %EasyCSPApp.getRequestData("usershadow_password")
+    set upw = ##class(EasyCSP.Core.Encryption).encrypt(pw,##class(EasyCSP.Configuration.Settings).getSetting("systemSalt"))
+    if upw '= upassword {
+        set failedAttempts = +%EasyCSPApp.userShadow.getAttributeValue("attemptsSinceLastGoodLogin") + 1
+        do %EasyCSPApp.userShadow.setAttributeValue("attemptsSinceLastGoodLogin",failedAttempts)
+        if failedAttempts > attemptsBeforeSoftSuspend {
+            do ..addError("users_username", "This account is temporarily suspended due to the number of failed login attempts. This will clear on its own shortly.")
+            do %EasyCSPApp.userShadow.setAttributeValue("softSuspendUntilDate", softSuspendUntil)
+            do %EasyCSPApp.userShadow.save()
+            quit 0
+        }
+        do ..addError("usershadow_password", "User name or password is invalid.")
+        quit 0
+    }
+    
+    if userKey = "" {
+        throw ##class(EasyCSP.Core.Exception).%New("login",403,"","The User Key disappeared.")
+    }
+    
+    if %EasyCSPApp.userShadow.hasConditions() { // not found; there's some kind of data error
+        throw ##class(EasyCSP.Core.Exception).%New("login",403,"","Shadow record missing.")
+    }
+    
+    if %EasyCSPApp.userShadow.status '= %EasyCSPApp.userShadow.%GetParameter("statusActive") {
+        do ..addError("users_username", "This account is not active. If you feel this is in error please contact an administrator.")
+        quit 0
+    }
+    
+    set softSuspendUntilDate = %EasyCSPApp.userShadow.softSuspendUntilDate
+    if softSuspendUntilDate '= "" {
+        if softSuspendUntilDate > ..getUniversalTime() {
+            do ..addError("users_username", "This account is suspended temporarily due to too many failed logins. This will clear shortly on its own.")
+            quit 0
+        } else {
+            do %EasyCSPApp.userShadow.setAttributeValue("softSuspendUntilDate", "") ; naughty-corner time is up. 
+        }
+    }
+    
+    // Otherwise, success! Clear soft impediments to login and update login stats.
+    do %EasyCSPApp.userShadow.setAttributeValue("attemptsSinceLastGoodLogin", 0)
+    do %EasyCSPApp.userShadow.setAttributeValue("lastGoodLoginDate", utcNow)
+    do %EasyCSPApp.userShadow.setAttributeValue("softSuspendUntilDate", 0)
+    
+    //do ..toggleDebug(1)
+    do %EasyCSPApp.userShadow.save()
+    
+    
+    set %EasyCSPApp.uid = userKey
+    
+    do %EasyCSPApp.setSession("uid", userKey)
+    
+    do ..clearAll()
+    
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

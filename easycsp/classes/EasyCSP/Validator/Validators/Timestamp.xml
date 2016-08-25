@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:30">
+<Class name="EasyCSP.Validator.Validators.Timestamp">
+<Description>
+The input string must first match "4N1X2N1X2N' '2N':'2N':'2N" -- the standard date-time 
+or timestamp format. If the format matches then call the date and time validators. Return
+1 (@true) if all three checks pass.</Description>
+<Language>mvbasic</Language>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64127,32314.504937</TimeChanged>
+<TimeCreated>64109,37544.765126</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    attribute = @ME->init(parameters)
+    if attribute->hasErrors() then return attribute
+    
+    value = attribute->value
+    
+    if value matches "4N1X2N1X2N' '2N':'2N':'2N" then
+        if "EasyCSP.Validator.Validators.Date"->run(field(value, " ", 1)) then
+            if "EasyCSP.Validator.Validators.Time"->run(field(value, " ", 2)) then
+                return attribute
+            end
+        end
+    end
+        
+    attribute->addError("Please enter a datetime value as YYYY/MM/DD HH:MM:SS.")
+    return attribute
+]]></Implementation>
+</Method>
+</Class>
+</Export>

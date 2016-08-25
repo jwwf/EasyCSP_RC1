@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:40">
+<Class name="EasyCSP.Web.index">
+<Description><![CDATA[
+<p>
+This is the lead class that creates an instance of an EasyCSP web application.
+The application is a shell that uses the web capabilities of CSP and the
+framework to run an application suite. The default page for any application
+process is "index.cls" (found in a Views subfolder owned by a controller).
+</p>
+/// <p>
+<b>Please do not change this page</b>. The only purpose for this page is to
+provide an entry-point into the framework system.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%CSP.Page</Super>
+<TimeChanged>64144,69642.168673</TimeChanged>
+<TimeCreated>63478,70396.854843</TimeCreated>
+
+<Method name="OnPage">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set haserror = 0
+    set %EasyCSPDebugging = 0
+    
+    if $get(%EasyCSPException) '= "" {
+        write "An unrecoverable error occurred during application start-up.",!
+        do $SYSTEM.OBJ.Dump(%EasyCSPException)
+        quit $$$OK
+    }
+    
+    if $get(%EasyCSPApp)["Web.Application" { // We have lift-off; the framework is alive
+        set %EasyCSPApp.indexName = $classname()_".cls" // this is a class, not a .csp
+    }
+    
+    // If "Something Really Bad" happened in the initialization phase
+    // catch it here. If init can't run successfully then it won't be
+    // possible to display the error page.
+    if $get(%EasyCSPApp) = "" {
+        w "<pre>",!
+        write "Error instantiating the EasyCSP web application",!!
+        do $SYSTEM.OBJ.Dump(%EasyCSPException)
+        w "</pre>",!
+        quit $$$OK
+        
+    }
+    
+    // Change the HTTP state to reflect the fact that headers may not be sent now. It's too late.
+    set %EasyCSPApp.pageState = "page" // no more headers can be issued.
+    set %EasyCSPApp.debugging = haserror ; you may change this to debug your custom classes
+    
+    // If the page didn't QUIT above then there's at least an app and likely
+    // a way to display an error page if there's a need.
+    if $get(%EasyCSPException)["Exception" {
+        set haserror = 1
+        w "<pre>",!
+        write "Error instantiating the EasyCSP web application",!!
+        do $SYSTEM.OBJ.Dump(%EasyCSPException)
+        w "</pre>",!
+        do %EasyCSPApp.init("site/error")
+        do %EasyCSPApp.controller.run()
+        quit $$$OK
+    }
+    
+    // There's an app with a controller. Run the controller which will run
+    // the requested action. If there has been an alteration in the MVC
+    // framework that makes the controller fail, it's most likely that the
+    // error handling can't run either. Dump the exception to the screen
+    // and let the step-debugging begin.
+    // 
+    // Take that as a warning not to modify the application, the controller
+    // base, or any of the object factories. If you need customs, clone, 
+    // modify, and test THAT.
+    try {
+        do %EasyCSPApp.controller.run()
+    } catch mvcException {
+        // Catch an otherwise unhandled exception. Unless the framework
+        // has been altered this should never be the case.
+        set:$get(%EasyCSPException)="" %EasyCSPException = mvcException
+        write "<pre>",!
+        do $SYSTEM.OBJ.Dump(%EasyCSPException) 
+        write "</pre>",!
+    }
+    
+    quit $$$OK
+    
+    if $get(%EasyCSPException)["Exception"{
+        write "<pre>",!
+        do $SYSTEM.OBJ.Dump(%EasyCSPException) 
+        write "</pre>",!
+        //quit $$$OK
+        do %EasyCSPApp.init("site/error")
+        do %EasyCSPApp.controller.run()
+    }
+    
+    
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnPreHTTP">
+<Description><![CDATA[
+<p>
+Event handler for <b>PreHTTP</b> event: this is invoked before
+the HTTP headers for a CSP page have been sent.  All changes to the
+<class>%CSP.Response</class> class, such as adding cookies, HTTP headers,
+setting the content type etc. must be made from within the OnPreHTTP() method.
+Also changes to the state of the CSP application such as changing
+%session.EndSession or %session.AppTimeout must be made within the OnPreHTTP() method.
+It is prefered that changes to %session.Preserve are also made in the OnPreHTTP() method
+as this is more efficient, although it is supported in any section of the page.
+Return <b>0</b> to prevent <method>OnPage</method> from being called.
+</p>
+
+<p>In the EasyCSP, use the OnPreHTTP event to set up the framework application.
+If the app is created, a clone of it must be preserved in %EasyCSPApp. This is
+because the only useful programmer-accessible parts of CSP service at this stage of invocation
+are OnPreHTTP() and OnPage(). The app must parse the route, create an instance of the
+controller object that handles that route and the controller may only process the
+before{Action} event handler.
+</p>
+
+<p>The process flow is:
+<ul>
+    <li>CSP runs OnPreHTTP. This classmethod attempts to instantiate the web
+        app. If the framework has been damaged so that the app can not be
+        instantiated, the exception is captured for processing in OnPage().
+    </li>
+    <li>If an instance of the app can be made then run the controller. The
+        controller will only run the "before"+action methods.
+
+<p>
+The same %EasyCSPApp process private global will be picked back up when CSP
+processes the OnPage() event.
+</p>]]></Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Boolean</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+    kill %EasyCSPApp
+    set haserror = 0
+    set %EasyCSPDebugging = 0
+    
+    // This sets up the app. The app makes a new instance of the desired
+    // controller. The controller runs any required access-checking and
+    // if that passes, it then runs any before-action methods. This allows
+    // the controller actions to set HTTP headers before %OnPage in this
+    // class.
+    try {
+        set %EasyCSPApp = ##class(EasyCSP.Web.Application).%New()
+    } catch %EasyCSPException {
+        //write "Unrecoverable exception occurred during %New()",!
+        //d $SYSTEM.OBJ.Dump(%EasyCSPException)
+        s haserror = 1
+    }
+    
+    if 'haserror {
+        try {
+            do %EasyCSPApp.init()
+        } catch %EasyCSPException {
+            //write "Unrecoverable exception occurred during init()",!
+            //d $SYSTEM.OBJ.Dump(%EasyCSPException)
+        }
+    }
+    
+    if $get(%EasyCSPException)["Exception" {
+        //d $SYSTEM.OBJ.Dump(%EasyCSPException)
+        quit $$$OK // it will be noticed in OnPage
+    }
+    
+    if $get(%EasyCSPApp)["Web.Application" { // We have lift-off; the framework is alive
+        set %EasyCSPApp.indexName = $classname()_".cls" // this is a class, not a .csp
+    }
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

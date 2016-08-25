@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:31">
+<Class name="EasyCSP.Validator.Validators.isUnique">
+<Description>
+Determines whether the value offered in an attribute is unique in the table. In parameters, set
+"model" to the name of the model class whose table to be searched If there is no matching key or 
+the key matches the one passed in then the value is deemed unique. If no key is passed in and a 
+match is found in the database then the record is regarded as new but there is another record 
+with a match. The validation in that case fails.</Description>
+<Language>cache</Language>
+<Super>EasyCSP.Validator.Base</Super>
+<TimeChanged>64150,80005.716872</TimeChanged>
+<TimeCreated>64126,67916.629864</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+        set attribute = ..init(parameters)
+        set model = parameters.get("model")
+        
+        if ($get(model) '[ "Models.") & ($get(model) '[ "Forms") & ($get(model) '[ "Settings") {
+            do attribute.addError(..%ClassName() _ " requires an instance of a data model to be passed in. Notify support.")
+            return attribute
+        }
+        
+        set key = model.recordId
+        
+        set keyColumn = model.PK
+        
+        set keyAttribute = model.getAttribute(keyColumn)
+        set keySQLFieldName = keyAttribute.sqlFieldName
+        
+        set tableName = model.SqlTableName
+        
+        set value = attribute.value
+        
+        if value = "" {
+            do attribute.addError(..%ClassName() _ " requires an existing, non-empty value for comparison. Notify support.")
+            return attribute
+        }
+        
+        set fieldName = attribute.sqlFieldName
+        
+        set sql = "select " _ keySQLFieldName _ " from " _ tableName _ " where " _ fieldName _ " = '" _ value _ "'"
+        
+        set rset = $classmethod("%SQL.Statement", "%ExecDirect",,sql)
+        
+        if $get(rset) = "" return attribute ; * no records found
+        
+        if rset.%ROWCOUNT > 1 {
+            do attribute.addError(..%ClassName() _ "Warning: value '" _ value _ "' is not unique and there is more than one record in the table that contains it.")
+            return attribute
+        }
+        
+        set sc = rset.%Next()
+        
+        if sc = 0 return attribute ; it's unique since there's no other record with that value in the specified field.
+        
+        if key '= rset.%Get(keySQLFieldName) {
+            do attribute.addError(..%ClassName() _ ": value '" _ value _ "' is already on file. Existing key: '"_rset.%Get(keySQLFieldName)_", this key: "_key)
+        }
+         
+         return attribute ; * it's the current record
+]]></Implementation>
+</Method>
+</Class>
+</Export>

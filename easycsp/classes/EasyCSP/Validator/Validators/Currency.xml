@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:28">
+<Class name="EasyCSP.Validator.Validators.Currency">
+<Description>
+A numeric, fixed-point value having two places to the right of the decimal</Description>
+<Language>mvbasic</Language>
+<Super>EasyCSP.Validator.Base</Super>
+<TimeChanged>64127,32072.536669</TimeChanged>
+<TimeCreated>64108,73718.899513</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    attribute = @ME->init()
+    if attribute->hasErrors() then return attribute
+    
+    value = attribute->value
+    
+    if value matches "0N'.'2N" then 
+        return attribute
+    end else
+        attribute->addError(@ME->%ClassName() : ": " : value : " is not in currency format.")
+        return attribute
+    end
+]]></Implementation>
+</Method>
+</Class>
+</Export>

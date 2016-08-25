@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:37">
+<Class name="EasyCSP.Web.Client.CSSQueue">
+<Description>
+A structure for storing requests for javascript files output in a specified output order.</Description>
+<Abstract>1</Abstract>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64140,67294.351895</TimeChanged>
+<TimeCreated>64121,40617.151915</TimeCreated>
+
+<Property name="availableCSSFiles">
+<Description>
+Quite a few CSS files are packaged with EasyCSP. These aren't added
+to a web page unless specifically called in.</Description>
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="CSSFilesQueue">
+<Description><![CDATA[
+Queue(request_order => (hasharray) id["url" => url, "depends" => depends_on])]]></Description>
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Method name="addAndEnqueueCSSPackage">
+<FormalSpec>id:%String="",CSSUrl:%String="",dependencies:%List=""</FormalSpec>
+<Implementation><![CDATA[
+    do ..addCSSPackage(id, CSSUrl, dependencies)
+    do ..queueCSSPackage(id)
+]]></Implementation>
+</Method>
+
+<Method name="addCSSPackage">
+<Description>
+The first parameter is the name of the CSS being added. Both scriptSource and dependencies may
+be specified as a Cache %List structure or as a comma-separated string. Whitespace will automatically
+be removed from comma-separated strings, thus "abc,def" and "abc, def" and $lb("abc","def") are
+functionally equivalent.</Description>
+<FormalSpec>id:%String="",CSSUrl:%String="",dependencies:%List=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(id)="" quit 0
+    
+    if $get(CSSUrl)="" quit 0   
+    
+    set pkg = ##class(EasyCSP.Core.HashArray).%New()
+    d pkg.set("url", CSSUrl)
+    d pkg.set("depends", dependencies)
+    
+    d ..availableCSSFiles.set(id, pkg)
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="hasCSSPackageId">
+<Description>
+"structure" is a core array containing script definitions in
+the order in which they were added.</Description>
+<FormalSpec>scriptId:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(scriptId)="" 0
+    set found = 0
+    
+        set queue = ..availableCSSFiles ; the queue is an array of definitions
+        set queueId = queue.Next()
+        while queueId '= "" {
+            set definition = queue.get(queueId)
+            if definition.Next() = scriptId {
+                set found = 1
+                quit
+            }
+            set queueId = queue.Next(queueId)
+        }
+    
+    quit found
+]]></Implementation>
+</Method>
+
+<Method name="isQueued">
+<FormalSpec>id:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(id)="" 0
+    
+    set queueSlot = ..CSSFilesQueue.Next()
+    while queueSlot '= "" {
+    }
+]]></Implementation>
+</Method>
+
+<Method name="initCoreCSSPackages">
+<Description>
+Core CSS needs to go in first as other CSS files depend on the correct
+cascade order. These are set automatically into the CSS output queue
+so that subsequent calls (if any) won't duplicate a call-in.</Description>
+<Implementation><![CDATA[
+    set ..availableCSSFiles = ##class(EasyCSP.Core.HashArray).%New()
+    
+    do ..addAndEnqueueCSSPackage("jquery", "js/source/jquery-ui/jquery-ui.min.css")
+    do ..addAndEnqueueCSSPackage("impromptu", "js/impromptu/jquery-impromptu.css", "jquery")
+    do ..addAndEnqueueCSSPackage("bootstrap", "css/bootstrap.min.css", "jquery")
+    do ..addAndEnqueueCSSPackage("bootstrap-theme", "css/bootstrap-theme.min.css", "boostrap")
+    
+    Quit
+]]></Implementation>
+</Method>
+
+<Method name="queueCSSPackage">
+<Description>
+Insert a script definition into the queue at the end, moving all other
+definitions back one position.</Description>
+<FormalSpec>cssId:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // The script must be identified to avoid duplication
+    quit:$get(cssId)="" $$$ERROR(1, "CSS ID can not be empty.")
+    
+    quit:..hasCSSPackageId(cssId) 1 ; it's already there; don't duplicate
+    set package = ..availableCSSFiles.get(cssId)
+    do ..CSSFilesQueue.append(package)
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="renderCSS">
+<Description>
+Dequeue scripts in the order they appear in the scriptQueue object.
+Get the script body from the definition and add it to the output stream.</Description>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    
+    set queueId = ..CSSFilesQueue.Next()
+    
+    while queueId '= "" {
+        set entry = ..CSSFilesQueue.get(queueId) ; get the css queue item at this key
+        set url = entry.get("url")
+        set ..ReturnGeneratedOutput = 1
+        
+        do output.WriteLine(..cssFile(url))
+        set queueId = ..CSSFilesQueue.Next(queueId)
+    } 
+    
+    quit output
+]]></Implementation>
+</Method>
+</Class>
+</Export>

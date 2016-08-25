@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:15">
+<Class name="EasyCSP.Layout.Layouts.Error">
+<Description><![CDATA[
+<p>
+Default layout. Extend this class or create your own layout to provide your site's
+custom look and feel.
+
+<p>
+The only required classmethod is "run()". When a controller calls the base class render() function,
+render searches for the run() method in the layout and passes in a MVFFramework.Core.ParameterList
+minimally containing an image of the controller object and as many table models as will be required.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Layout.Base</Super>
+<TimeChanged>64140,64754.471526</TimeChanged>
+<TimeCreated>63481,36812.042056</TimeCreated>
+
+<Method name="run">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set controller = ..data.get("controller")
+    set:controller="" controller = %EasyCSPApp.controller
+    
+    if $get(controller)'["Controller" {
+        do ..SetCondition(404,"Missing the controller name that should have been passed to "_$classname()_".")
+        quit 0
+    }
+       // d:isobject(%EasyCSPException) $System.OBJ.Dump(%EasyCSPException)
+    
+    set view = ""
+    set viewBaseClassname = ..data.get("view")
+    do ..data.unset("view")
+    
+    set view = ##class(EasyCSP.Core.Component).objectFactory(viewBaseClassname, "view", 1, ..data)
+        
+    set ..view = view
+    
+    set viewId = $get(view)
+    
+    // If a view uses a user call or a widget that has a problem in it
+    // keep the system from dying by adding try/catch here, passing the
+    // exception object upward.
+    set hasError = 0
+    try {
+        set view.data = ..data
+        set view.errors = ..errors
+        do ..view.run()
+    } catch %EasyCSPException {
+        set hasError = 1 // let the controller dispatch it
+    }
+    
+    if hasError quit 0 // just stop and let the exception handler deal with it.
+    
+    // start an output buffer
+    do ..beginHeadContent()
+    
+    do ..addHeadContent(..tag("title", "", ..view.pageTitle, 1))
+    
+    /*
+    * Doctype, beginning <html> tag, and <head></head> section
+    */
+    
+    // head: doctype and metas
+    set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    
+    do ..metaTag("text/html; charset=utf-8", "", "Content-Type", htmlOptions)
+    do ..metaTag("en", "language", "", htmlOptions)
+    do ..metaTag("IE=Edge,chrome=1", "", "X-UA-Compatible", htmlOptions)
+    
+    // head: stylesheets
+    do ..cssFile("css/default.css")
+    
+    // End of the <head> section. Add head section tags *before* ending the content. Ending the content will close the head section and rewind the stream.
+    // You may leave this out and allow the renderer to close it automatically.
+    do ..endHeadContent()
+    
+    /*
+    *  Body and content
+    */
+    
+    do htmlOptions.unsetAll()
+    do ..beginBodyContent(htmlOptions)
+    
+    do ..addBodyContent("<div id=""page-wrapper"">")
+    
+    // here is an appropriate place to add a menu widget
+    // do %EasyCSPApp.addheadStreamContent(##class(buildamenuthingie).run())
+        
+    do ..addBodyContent("        <div class=""container"" id=""page-block"">")
+    
+    // Set up come kind of a heading for demo
+    do ..addBodyContent("            <div class=""header"">")
+    do ..addBodyContent("               <table width=""100%""><tr>")
+    do ..addBodyContent("               <td><img src=""images/EasyCSP-sm.jpg"" style=""text-align: left;"" alt=""Easy CSP"" /></td>")
+    do ..addBodyContent("               <td style=""text-align: right;""><h1>Easy CSP Framework</h1></td>")
+    do ..addBodyContent("               </tr>")
+    do ..addBodyContent("               <tr>")
+    do ..addBodyContent("               <td></td>")
+    do ..addBodyContent("               <td style=""text-align: right;"">")
+    if %EasyCSPApp.users.getAttribute("firstname") '= "" {
+        do ..addBodyContent("Welcome " _ %EasyCSPApp.users.getAttributeValue("firstname") _ " " _ %EasyCSPApp.users.getAttributeValue("surname") _ " ")
+    }
+    do ..addBodyContent(..routeLink("Home","site/index")_" | "_..routeLink("Log Out", "site/logout"))
+    do ..addBodyContent("               </td>")
+    do ..addBodyContent("               </tr></table>")
+    
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("class", "fright")
+    do htmlOptions.set("width", "100%")
+    do ..addBodyContent("            </div>")
+    
+    // The content divs are set up. The endpoint view class will put the content here.
+    
+    try {   
+        do ..addBodyStreamContent(..view.render())
+    } catch %EasyCSPException {
+    }
+    
+    // If there is information in the controller's debug stream, output that here. A
+    // controller extent can not write output to a view.
+    if controller.debugInfo.Size > 0 {
+        set options = ##class(EasyCSP.Core.HashArray).%New()
+        do options.set("id", "debug-block")
+        do ..addBodyContent("<div id=""debug-block"">")
+        do ..addBodyStreamContent(controller.debugInfo)
+        do ..closeTag("</div>")
+    }
+        
+    //quit:$get(%EasyCSPException)'="" 1 // let the controller dispatch error display
+
+    // Close this layout's div tags.
+    do ..addBodyContent("    </div>")
+    do ..addBodyContent("</div>")
+    
+    /*
+    *  End of body content and page
+    */
+    
+    do ..endBodyContent()
+        
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

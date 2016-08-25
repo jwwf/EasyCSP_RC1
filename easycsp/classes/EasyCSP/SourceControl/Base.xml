@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:26">
+<Class name="EasyCSP.SourceControl.Base">
+<Description>
+Common functions and properties
+EasyCSP.Core.Component,</Description>
+<Abstract>1</Abstract>
+<Super>%Studio.Extension.Base</Super>
+<TimeChanged>64155,55704.09642</TimeChanged>
+<TimeCreated>64150,82406.78222</TimeCreated>
+
+<Property name="currentProject">
+<Type>%Studio.Project</Type>
+</Property>
+
+<Parameter name="defaultExportDirectory">
+<Type>%String</Type>
+<Default>C:\SourceControl</Default>
+</Parameter>
+
+<Parameter name="Flags">
+<Description><![CDATA[
+Parameter Flags
+Used to control which dialogs appear in Studio, if the position is '1'
+then this dialog will appears and if it is '0' the <method>UserAction</method>
+will be called to determine what to do. This is included for backward compatibilty.
+The dialog are:<ul>
+<li>1 : Present dialog on check in</li>
+<li>2 : Present dialog on check out</li>
+<li>3 : Ask to add new item to source control</li>
+<li>4 : Ask to remove deleted item from source control</li></ul>]]></Description>
+<Type>STRING</Type>
+<Default>1111</Default>
+</Parameter>
+
+<Property name="CSPServiceDirectory">
+<Type>%String</Type>
+</Property>
+
+<Property name="exportDirectory">
+<Description>
+The computed export directory. This starts at the designated source control
+path from EasyCSP_Configuration.Settings. The subpath is the machine node
+name, the instance name, then branches between classes, routines, and other
+types of objects at the end.</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="isStandup">
+<Description>
+This is set to TRUE when the developer clicks "Make Stand-up Image". This flag modifies the path for
+classes and globals to add "standup/mm-dd-yyyy-hh:mm:ss" as destination subfolders under the namespace
+folder on disk. This allows snapshotting of a particular namespace code and data image to make it easier
+to stand up the same namespace on another machine.</Description>
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<UDLText name="T">
+<Content><![CDATA[
+/* **************************************************************************************************
+/
+/                                            Base Worker Functions
+/
+/  *************************************************************************************************/
+]]></Content>
+</UDLText>
+
+<Method name="checkdir">
+<Description>
+Using the MVBasic OPENPATH command, check the existence of an OS path (Windows or
+*nix -- VMS is not supported here). Return 1 (TRUE) if the path exists.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pathname:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(pathname) = "" then return 0
+    
+    openpath pathname to dir on error return 0 else return 0
+    
+    close dir
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="export">
+<FormalSpec>InternalName:%String</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    
+    do ..setExportDir()
+    
+    set sourceControl = ##class(EasyCSP.Core.Component).objectFactory("SourceControl", "model")
+    do sourceControl.read(InternalName)
+    
+    set externalName = ..ExternalName(InternalName)
+        
+    write !,"Saving "_InternalName_" to the source control directory as '",externalName,".",!
+    
+    if externalName '= "" {
+        set sc = $SYSTEM.OBJ.Export( InternalName, externalName_".xml")
+        if $$$ISERR(sc) write $SYSTEM.Status.DecomposeStatus(sc),!
+    }
+    
+    do sourceControl.setAttributeValue("adddate", ..getUniversalTime())
+    do sourceControl.save()
+        
+    quit sc
+]]></Implementation>
+</Method>
+
+<Method name="exportAll">
+<Description>
+Exports individual classes, routines, globals, and csp files to the
+source control directory.</Description>
+<FormalSpec><![CDATA[&parameters:EasyCSP.Core.HashArray=""]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    do ..setExportDir()
+    
+    // Classes
+    set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    do parameters.set("model", "SourceControl")
+    set query = ##class(EasyCSP.SQL.Query).%New(parameters)
+    do query.addCondition("Type", "=", "class")
+    set rset = query.getRecordset()
+    
+    zw rset
+    
+    while rset.%Next() {
+        set name = rset.%Get("Name") _ ".cls"
+        write "Preparing to export ",name,!
+        do ..export(name)
+    }
+    
+    // Routines
+    set query = ##class(EasyCSP.SQL.Query).%New(parameters)
+    do parameters.set("model", "SourceControl")
+    do query.addCondition("Type", "=", "routine")
+    set rset = query.getRecordset()
+    
+    while rset.%Next() {
+        do ..export(rset.%Get("Name"))
+    }
+    
+    // Globals
+    do ..exportGlobals(parameters)
+    
+    // CSP External Files
+    do ..exportCSP(parameters)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="exportCSP">
+<Description>
+Copy CSP items from the Cache service directory to the source control
+.../csp/... directory.</Description>
+<FormalSpec><![CDATA[&parameters:EasyCSP.Core.HashArray=""]]></FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    @ME->setExportDir()
+    
+    cmd = "rsync -ruv " : @ME->CSPServiceDirectory : @ME->slash() : "* " : @ME->exportDirectory : @ME->slash() : "csp/"
+    
+    pcperform cmd capturing reply
+    crt reply ; * echo back to the output window
+    
+    "EasyCSP.Model.Models.SourceControl"->addCSPFiles()
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="exportGlobals">
+<Description>
+Kill off work and query result scratch globals. Reset the globals that have tables by using SQL. This
+method contains a list with global names that are used as patterns.
+This method starts by finding all the globals in the namespace
+then picks out full global names based on the patterns in the list. This ensures that all
+related globals and subtables will be included in the dump.</Description>
+<FormalSpec><![CDATA[&parameters:EasyCSP.Core.HashArray=""]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set slash = ..slash()
+    set date = $replace($zd($p($now(),",",1)),"/","-")
+    set time =  $replace($zt($p($now(),",",2)),":","-")
+    set baseDir = ""
+    do ..setExportDir()
+    set exportDirectory = ..exportDirectory _ slash _ "globals" ; ** _ slash _ date _ "-" _ time
+    set sc = ..mkdir(exportDirectory) ; check the path and create it if it doesn't exist
+    
+    // Now query the namespace to find the complete list of globals. Iterate through the list
+    // to find all the globals containing the target name-strings.
+    set allGlobalResults = ##class(%ResultSet).%New("%SYS.GlobalQuery:NameSpaceList")
+    do allGlobalResults.Execute($namespace,"*",1,"",,0)
+    
+    set exportList = ""
+    
+    while (allGlobalResults.Next()) {
+    
+        set exportFile = allGlobalResults.Data("Name")
+        
+        if '..filterGlobal(exportFile) continue
+        
+        set exportFileName = exportDirectory _ slash _ exportFile  _ ".gof"
+    
+        set sc = $$$OK
+        set sc = ##class(%Library.Global).Export($namespace, exportFile, exportFileName) // the rest of the options are Cache default
+        //write "Exporting ",namespace," ",exportFile," to ",exportFileName,!
+        if $$$ISERR(sc) {
+            write !
+            write $SYSTEM.Status.GetErrorText(sc),!
+            write !,"Could not make a backup file. Correct the error-causing condition ",!
+            Write "and try again. No globals have been changed."
+        }
+    }
+    
+    quit $$$OK // change after debugging!!
+]]></Implementation>
+</Method>
+
+<Method name="ExternalName">
+<Description>
+Convert the internal name, e.g. TEST.MAC to an external name that is used to export
+the routine/class/csp item. This is often a filename to write the file out to.</Description>
+<FormalSpec>InternalName:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if $get(InternalName) = "" {
+        write "Internal name is empty. Skipping.",!
+        quit ""
+    }
+    
+    //write "(EasyCSP.SourceControl.StudioExtension).externalName(): Internal name is: ",InternalName,!
+    set exportDirectory = ""
+    set externalName = ..pathFromClassname(InternalName)
+    //write "External name will be ",externalName,!
+    
+    Quit externalName
+]]></Implementation>
+</Method>
+
+<Method name="filterGenerated">
+<Description>
+Filter generated classes and routines out</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>name:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(name) = "" then return 0
+    
+    if name matches "'INFORMATION.SCHEMA'0X" then return 0
+    
+    excludePatterns = $listBuild("1x0x'.'1N0N'.INT'", 
+        "1X0X'.'1N0N'.MAC'", 
+        "...'.G'1N0N'.MAC'", 
+        "...'.T'1N0N'.'3A", 
+        "...'.MVI'",
+        "'cmql'0X")
+        
+    filter = $listToString(excludePatterns, @fm)
+    numberOfPatterns = dcount(filter, @fm)
+    
+    for idx = 1 to numberOfPatterns
+        if name matches filter<idx> then return 0
+    next
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="filterGlobal">
+<FormalSpec>globalName:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(globalName) = "" then return 0
+    
+    noWayNoHow = convert(",", @fm, "ROUTINE,CacheStream,CacheTemp,rBACKUP,rINC,rINCSAVE,rINDEX,rINDEXCLASS,rINDEXEXT,rINDEXSQL,rMAC,rMACSAVE,rMAP,rOBJ")
+    find globalName in noWayNoHow setting AMC then return 0
+    
+    if globalName[1,1] = "%" then return 0
+    if globalName[1,3] = "odd" then return 0
+    if globalName[1,3] = "MV." then return 0
+    if globalName[1,4] = "ISC." then return 0
+    if globalName[1,7] = "ROUTINE" then return 0
+    if globalName matches "1A0X'('1X0X')'0X" then return 0
+    if globalName = "CacheStream" then return 0
+    if  globalName matches "'CacheTemp'1X0X" then return 0
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="getUniversalTime">
+<Description>
+System(99) Universal time; the number of seconds since December 31, 1970. This is the same as the *nix epoch.</Description>
+<Language>mvbasic</Language>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    return SYSTEM(99)
+]]></Implementation>
+</Method>
+
+<Method name="hasMethod">
+<Description><![CDATA[
+Return a true or false indicting whether the current instance contains a method named in the <i>methodName</i> formal spec parameter.]]></Description>
+<Final>1</Final>
+<FormalSpec>methodName</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(methodName)="" 0
+    q:$get(methodName)="" 0
+    q $s($d(^oddCOM($classname(),"m",methodName,44))#2:^(44),$d(^oddCOM($g(^(2),$classname()),"m",methodName,44))#2:^(44),1:$s($d(^oddDEF($g(^oddCOM($classname(),"m",methodName,2),$classname()),"m",methodName,44))#2:^(44),1:$g(^%qCacheObjectKey(1,"m",44))))
+]]></Implementation>
+</Method>
+
+<Method name="mkdir">
+<Description>
+For Windows, specify the drive-letter:\ portion explicitly. If the dir argument passed in
+does not have a drive specification then this routine will refuse to create it.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>dir:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(dir) = "" then return 0 ; * where is the new folder supposed to live?
+    slash = "EasyCSP.SourceControl.Base"->slash()
+    
+    convert "\/" to @fm:@fm in dir
+    runningWindows = (system(91) = 1)
+    
+    if runningWindows then
+        driveSpec = dir<1>
+        if not(driveSpec matches "1A':'") then return 0
+        rootDir = field(dir, @fm, 1, 2)
+        del dir<1> ; del dir<1> ; * start creating stems at the top then work on the subdirs below
+    end else
+        if dir<1> = "" then del dir<1>
+        rootDir = "/" : dir< 1 >
+        del dir<1>
+        startAt = 1
+    end
+    
+    convert @fm to slash in rootDir
+    
+    * if the topmost part of the directory path doesn't exist and can't be
+    * created then this process has to stop.
+    if "EasyCSP.SourceControl.Base"->checkdir( rootDir ) = 0 then
+        pcperform "mkdir " : rootDir
+        if "EasyCSP.SourceControl.Base"->checkdir( rootDir ) = 0 then return 0
+    end
+    
+    dirLength = dcount(dir, @fm)
+    
+    pieces = 1
+    for idx = 1 to dirLength
+        nextStem = rootDir : slash : field(dir, @fm, 1, idx)
+        convert @fm to slash in nextStem
+        if "EasyCSP.SourceControl.Base"->checkdir( nextStem ) = 0 then
+            pcperform "mkdir " : nextStem
+            if "EasyCSP.SourceControl.Base"->checkdir( nextStem ) = 0 then return 0
+        end
+    next
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="slash">
+<ClassMethod>1</ClassMethod>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    IF SYSTEM(91) = 0 THEN RETURN( "/" ) ELSE RETURN( "\")
+]]></Implementation>
+</Method>
+
+<Method name="makeStandup">
+<Description><![CDATA[
+Create a subdirectory of the on-disk source control directory and make a snapshot of
+all the code in the namespace with data globals. This closes the currently-open project
+in <property>project</property> and creates a new project named Standup_mm_dd_yyyy_hh_mm_ss.prj
+containing a deploy-ready image to stand up a new namespace or image.]]></Description>
+<FormalSpec><![CDATA[&parameters:EasyCSP.Core.HashArray=""]]></FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $isobject(..currentProject) set ..currentProject = ""
+    
+    set date = $replace($zd($p($now(),",",1)),"/","_")
+    set namespace = $namespace
+    set time =  $replace($zt($p($now(),",",2)),":","_")
+        
+    set ..currentProject = ##class(%Studio.Project).%New()
+    set ..currentProject.Name = "Standup" _ namespace _ "_" _ date _ "_" _ time _ ".prj"
+    do ##class(EasyCSP.Model.Models.SourceControl).refresh(1) // capture all classes and routines in this namespace
+    set ..isStandup = 1
+    
+    do ..setExportDir()
+    
+    set c = ""
+    for  {
+        set c = $order(^EasyCSPSourceControl($namespace,"classes", "desc", c))
+        quit:c=""
+        set internalName =  ^EasyCSPSourceControl(namespace, "classes", "desc", c, "name")
+        set className = internalName _ ".cls"
+        do ..currentProject.AddItem(className)
+        do ..export(internalName)
+    }
+    
+    set c = ""
+    for  {
+        set c = $order(^EasyCSPSourceControl($namespace,"routines", "desc", c))
+        quit:c=""
+        set internalName =  ^EasyCSPSourceControl(namespace, "routines", "desc", c, "name")
+        set className = internalName
+        do ..currentProject.AddItem(className)
+        do ..export(internalName)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="pathFromClassname">
+<Description>
+Returns a list with two pieces: the path to the class and the class name. The default is to
+create the folders and subfolders needed. The simple class name is returned as the second
+element in the list.</Description>
+<FormalSpec>internalName:%String,isRoutine:%Boolean=0,create:%Boolean=1</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    
+    routineExtensions = $listBuild("int", "mac", "inc")
+    
+    stringToParse = convert( ".", @fm, internalName)
+    possibleExtension = downcase(stringToParse< dcount(stringToParse, @fm) >)
+    
+    begin case
+    
+        case $listFind(routineExtensions, possibleExtension) > 0
+            isRoutine = 1
+            externalName = internalName
+            
+        case possibleExtension = "cls"
+            isRoutine = 0 ; * this is a class definition
+            del stringToParse<dcount(stringToParse, @fm)> ; * remove the extension
+            externalName = stringToParse
+            
+        case @true
+            externalName = internalName         
+    
+    end case
+        
+    slash = @ME->slash()
+    rtn = @ME->exportDirectory
+    
+    * if mapping a class, use the classes subdirectory else use routines for .mac and .int
+    rtn<-1> = if isRoutine then "routines" else "classes"
+    rtn<-1> = externalName
+    convert slash to @fm in rtn
+    *rtn = trim(rtn, @fm)
+    
+    pathLength = dcount(rtn,@fm)
+    dirOnly = field(rtn, @fm, 1, pathLength - 1)
+    
+    *crt "pathFromClassname dir-only: ":dirOnly
+    
+    if not(@ME->mkdir(dirOnly)) then return "" ; * check and create dir if needed; return "" if it can't be found or created
+    simpleClassName = rtn<pathLength>
+    
+    convert @fm to slash in rtn
+    return rtn ; * then return the enclosing folder name and class name separately
+]]></Implementation>
+</Method>
+
+<Method name="saveCSPFromList">
+<Description>
+Recursive method to trundle through the directory listing and make
+records for CSP-directory items.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>ls:EasyCSP.Core.HashArray</FormalSpec>
+<Implementation><![CDATA[
+    quit:$get(ls)=""
+    
+    set nxt = ls.Next()
+    while nxt '= "" {
+        set obj = ls.get(nxt)
+        if $get(obj)["HashArray" { // then this is a list of file names
+            if obj.get("Type") '= "D" {
+                set model = $classmethod($ClassName(), "%New")
+                do model.read($replace(obj.get("Name"), ..slash(), "_"))
+                set:model.getIsNewRecord() model.recordId = $replace(obj.get("Name"), ..slash(), "_")
+                do model.setAttribute("adddate", ..getUniversalTime())
+                do model.save()
+                
+                set path = $piece(model.Name, ..slash(), 1, $length(model.Name, ..slash()) - 1)
+                do ..mkdir(path) ; ensure that the directory exists; create if not.
+                
+                set inFile = ##class(%File).%New(model.Name)
+                do inFile.Open("R")
+                
+                set outFile = ##class(%File).%New(model.Name)
+                do outFile.Open("W")
+                do outFile.CopyFile(inFile)
+                
+                do inFile.Close()
+                do outFile.Close()
+            }
+        } else { // otherwise it's a new directory
+            do ..saveCSPFromList(obj)
+        }
+        set nxt = ls.Next(nxt)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="setExportDir">
+<Description><![CDATA[
+Set the location of the OS export directory. Allow the value to be overridden so the export routines
+may be used from the command line for out-of-line code and global exports. If no formal argument is
+supplied in <var>exportDirectory</var> this method will first attempt to retrieve it from the SETTINGS
+global. If that has not been set then use the hard-coded <parameter>exportDir</parameter> parameter in this class.
+If the directory can be either located or created then a 1 (TRUE) will be returned along with the
+ByRef variable exportDirectory pointing to the finalized external directory path.]]></Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set slash = ..slash()
+    
+    // Figure out where CSP files come from then save that location
+    set CPFLocation = ##class(%SYS.System).GetCPFFileName()
+    set instanceLocation = $piece(CPFLocation, slash, 1, $length(CPFLocation, slash) - 1)
+    set ..CSPServiceDirectory = instanceLocation _ slash _ "csp" _ slash _ $mvoconv($namespace, "MCL")
+    
+    // Query SETTINGS to find where the repo will be. Create the repo directory
+    // if necessary then create the four subdirectories
+    set repoDir = ##class(EasyCSP.Configuration.Settings).getSetting("exportDir")
+    set:repoDir="" repoDir = ..#defaultExportDirectory
+    
+    set repoDir = repoDir _ slash _ $mvoconv($namespace, "MCL")
+    
+    if ..isStandup {
+        set date = $replace($zd($p($now(),",",1)),"/","-")
+        set time =  $replace($zt($p($now(),",",2)),":","-")
+        set repoDir = repoDir _ slash _ "standup" _ slash _ date _ "-" _ time
+    }
+    
+    set ..exportDirectory = repoDir
+    
+    set OK = ..mkdir(..exportDirectory) ; check the entire path, create subdirs as needed
+    set OK = OK + ..mkdir(..exportDirectory _ slash _ "classes")
+    set OK = OK + ..mkdir(..exportDirectory _ slash _ "routines")
+    set OK = OK + ..mkdir(..exportDirectory _ slash _ "globals")
+    set OK = OK + ..mkdir(..exportDirectory _ slash _ "csp")
+    
+    quit (OK > 0)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

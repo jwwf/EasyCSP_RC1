@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:16">
+<Class name="EasyCSP.Model.Metadata">
+<Description><![CDATA[
+Trundle through SQL and class definition sqlMetadata to form
+a complete description of every field in the table associated
+with a class/global/Pick file. This information is used in
+many places throughout the framework for screen building and
+field data validation.
+
+Cache provides certain information about each class of component
+surrounding a global, both from the class view and the SQL view.
+
+<pre>
+
+Contents of a SQL Statement Column
++----------------- attribute values ------------------
+          ODBCType = 12
+        clientType = 10
+           colName = "ID"
+         isAliased = 0
+   isAutoIncrement = 1
+   isCaseSensitive = 1
+        isCurrency = 0
+      isExpression = 0
+          isHidden = 0
+        isIdentity = 1
+       isKeyColumn = 1
+        isNullable = 0
+        isReadOnly = 1
+           isRowId = 1
+      isRowVersion = 0
+          isUnique = 1
+             label = "ID"
+         precision = 50
+         qualifier = 0
+             scale = 0
+        schemaName = "EasyCSP_Models"
+         tableName = "Users"
+-------------------------------------------
+Data types
+ODBC  JDBC    Data Type
+-11 -11 GUID
+-7  -7  BIT
+-6  -6  TINYINT
+-5  -5  BIGINT
+-4  -4  LONGVARBINARY
+-3  -3  VARBINARY
+-2  -2  BINARY
+-1  -1  LONGVARCHAR
+0   0   Unknown type
+1   1   CHAR
+2   2   NUMERIC
+3   3   DECIMAL
+4   4   INTEGER
+5   5   SMALLINT
+6   6   FLOAT
+7   7   REAL
+8   8   DOUBLE
+9   91  DATE
+10  92  TIME
+11  93  TIMESTAMP
+12  12  VARCHAR
+</pre>]]></Description>
+<Abstract>1</Abstract>
+<TimeChanged>64142,48652.309833</TimeChanged>
+<TimeCreated>64091,30425.059512</TimeCreated>
+
+<Property name="modelId">
+<Type>%String</Type>
+<Transient>1</Transient>
+</Property>
+
+<Property name="sqlFieldNames">
+<Type>EasyCSP.Core.HashArray</Type>
+<Transient>1</Transient>
+</Property>
+
+<UDLText name="T">
+<Content><![CDATA[/*********************************************************************************/
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[/*                                   Metadata                                    */
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[/*********************************************************************************/
+]]></Content>
+</UDLText>
+
+<Method name="getMetadata">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    
+    set ..modelClass = $className($this)
+    set ..modelId = $mvoconv(..%ClassName(0), "MCL")
+    set ..sqlFieldNames = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set ..columnOrder = ##class(EasyCSP.Core.Array).%New()
+    
+    set classDef = ##class(%Dictionary.CompiledClass).%OpenId(..modelClass)
+    
+    set ..SqlTableName = classDef.SqlSchemaName _ "." _ classDef.SqlTableName
+    
+    if ($find(classDef.Super, "MV.Adaptor") > 0) ! ($find(classDef.Super, "Model.MVBase") > 0) {
+        set ..isMV = 1
+    }
+    
+    set key = ""
+    set key = classDef.Properties.Next(key)
+    While key '= "" {
+        SET canUse = 1
+        set compiledProperty = classDef.Properties.GetAt(key)
+        
+        set:compiledProperty.Calculated=1 canUse = 0
+        set:compiledProperty.Storable=0 canUse = 0
+        set:compiledProperty.Transient=1 canUse = 0
+                
+        set requiredList = ""
+        
+        if canUse {
+            
+            set attribute = ##class(EasyCSP.Model.attribute).%New()
+            
+            set attribute.name = compiledProperty.Name
+            set attribute.type = ..normalizeType(compiledProperty.Type) // might be overridden by SQL
+            set attribute.required = compiledProperty.Required
+            do:attribute.required=1 attribute.addValidator("Required")
+            
+            set finder = ..modelId_"_"_$MVOCONV(attribute.name, "MCL") // remove case-sensitivity when finding attributes
+            
+            set attribute.order = compiledProperty.SequenceNumber
+            
+            // create a default text box or select box label. The labels can be modified at any time after construct on as as-needed/as-wanted basis.
+            // 2014/12/15 - jwwf - add support for MV classes
+            set externalFieldName = ""
+            
+            // Additional parameters for MV class properties live in a different place to classic %Persistent property parameters.
+            // For MV, retrieve the collection and parse from there.
+            
+            set width = 64 ; * arbitrary width unless overridden by attribute parameter
+            
+            // Warn the rest of the framework if this attribute is multivalued.
+            set attribute.collection = compiledProperty.Collection
+            
+            if ..isMV {
+                
+                set parms = compiledProperty.Parameters
+                
+                set attribute.mvParameters = parms
+                
+                // if this is an I-Type then it isn't supported yet.
+                if parms.IsDefined("MVTYPE") {
+                    set mvType = parms.GetAt("MVTYPE")
+                    if mvType = "I" set canUse = 0
+                }
+            
+                if canUse {
+                    if parms.IsDefined("MVATTRIBUTE") {
+                        
+                        do ..columnOrder.set(parms.GetAt("MVATTRIBUTE")+1, finder)
+                        set attribute.order = parms.GetAt("MVATTRIBUTE")
+                        if (attribute.order=0)&(..PK="") {
+                            set ..PK = finder
+                            set attribute.isPK = 1
+                        }
+                    }
+                }
+                
+                If parms.IsDefined("MVHEADING") {
+                    set externalFieldName = parms.GetAt("MVHEADING")
+                }
+                
+                if (externalFieldName="") & (parms.IsDefined("MVNAME")) {
+                    set externalFieldName = parms.GetAt("MVNAME")
+                }
+                
+                if parms.IsDefined("MVWIDTH") {
+                    set width = parms.GetAt("MVWIDTH")
+                }
+                
+            }
+            
+            set attribute.sqlFieldName = compiledProperty.SqlFieldName
+            do ..sqlFieldNames.set(compiledProperty.SqlFieldName, finder)
+            
+            do ..finderMap.set(compiledProperty.SqlFieldName, finder)
+            do ..columnNames.set(finder, compiledProperty.SqlFieldName)
+            
+            set attribute.width = width
+            
+            set:externalFieldName="" externalFieldName = compiledProperty.SqlFieldName
+            set:externalFieldName="" externalFieldName = compiledProperty.Name
+            
+            set label = ##class(EasyCSP.Conversions.ColumnToLabel).run(externalFieldName)
+            set attribute.label = label
+            do ..columnLabels.set(finder, label)
+            
+            if compiledProperty.Description '= "" set attribute.tooltip = compiledProperty.Description
+            
+            do ..typeToValidation(.attribute)
+            
+            d:canUse ..attributes.SetAt(attribute, finder)
+            //write:canUse "Adding "_finder_" to attributes.",!
+            
+            }
+        
+        set key = classDef.Properties.Next(key)
+        
+    }
+    
+    // Next, grab the table sqlMetadata and cubbyhole each column description
+    // under the standard model finder name. This query isn't executed; it's
+    // just prepared in order to grab the metadata.
+    set rset = ##class(%SQL.Statement).%New()
+    set sql = "select * from "_..SqlTableName
+    
+    set sc = rset.%Prepare(sql)
+    set colCount = rset.%Metadata.columnCount
+    
+    for idx = 1:1:colCount {
+        set sqlStatementCol = rset.%Metadata.columns.GetAt(idx)
+        
+        //do $SYSTEM.OBJ.Dump(sqlStatementCol)
+        
+        set finder = ..sqlFieldNames.get(sqlStatementCol.colName)
+        
+        if finder = "" continue
+        
+        set attribute = ..attributes.get(finder)
+        set attribute.sqlMetadata = sqlStatementCol
+        do ..attributes.set(finder, attribute)
+        
+        if sqlStatementCol.isRowId=1 {
+            set ..PK = finder
+            set attribute.isPK = 1
+        }
+        
+        // Ignore transient properties and expressions.
+        if 'sqlStatementCol.isExpression {
+            
+            set attribute = ..attributes.get(finder)
+        
+            // if an attribute was defined above (not transient or MV expression or IType)
+            if attribute '= "" {
+                
+                set attribute.odbcType = sqlStatementCol.ODBCType
+                do:sqlStatementCol.isAutoIncrement attribute.displayTraits.append("autoincrement", 1)
+                do:sqlStatementCol.isCaseSensitive attribute.displayTraits.append("casesensitive", 1)
+                do:sqlStatementCol.isCurrency attribute.displayTraits.append("currency", 1)
+                do:sqlStatementCol.isHidden attribute.displayTraits.append("nodisplay", 1)
+                do:sqlStatementCol.isReadOnly attribute.displayTraits.append("readonly", 1)
+                set:sqlStatementCol.isReadOnly attribute.readOnly = 1
+                do:sqlStatementCol.isUnique attribute.addValidator("isUnique")
+                //do ..attributes.SetAt(attribute, finder)
+                //do ..sqlMetadata.SetAt(sqlStatementCol, finder)
+            
+            do:canUse ..attributes.SetAt(attribute, finder)
+            //write:canUse "Adding SQL metadata to "_finder,!
+            }
+        }
+    }
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="findBySQLFieldName">
+<Description>
+Using one of the column finder names (either the sql version or
+the property name) return the column order number</Description>
+<FormalSpec>sqlFieldName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if $get(sqlFieldName) = "" return ""
+ 
+ set key = ..attributes.Next("")
+ while key '= "" {
+     set atb = ..attributes.get(key)
+     if atb.sqlFieldName = sqlFieldName {
+        return key
+     }
+     set key = ..attributes.Next(key)
+ }
+ 
+ quit ""
+]]></Implementation>
+</Method>
+
+<Method name="normalizeType">
+<FormalSpec>type</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    type = downcase(convert("%$", "", type))
+    if type[1,7] = "library" then type = field(type, ".", 2, 99)
+    type = field(type, '.', dcount(type, '.'))
+    return type
+]]></Implementation>
+</Method>
+
+<Method name="typeToValidation">
+<Description>
+Add some default validation rules based on the DICT/class property
+requirements in the compiled class.</Description>
+<FormalSpec><![CDATA[&attribute]]></FormalSpec>
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    type = @ME->normalizeType(attribute->type)
+    if $get(type) = "" then return attribute ; * unchanged
+    finder = downcase(convert("%$", "", type))
+    segments = dCount(finder, ".")
+    finder = field(finder, ".", segments) ; * pick out the last field which would be the specific type
+    label = oconv(attribute->label, 'MCL')
+    
+    attributeFinder = @ME->findFinder(attribute->name)
+
+    Begin Case
+    
+        case index("currency",finder,1) > 0
+            attribute->addValidationRule(attributeFinder, "Currency")
+            changed = 1
+    
+        case index("bigint,counter,double,float,smallint",finder,1) > 0
+            @ME->addValidationRule(attributeFinder, "Numeric")
+            attribute->displayTraits->append("number") ; * The model should add "min" and "max" trait rules
+            changed = 1
+            
+        case index("boolean", finder, 1)
+            @ME->addValidationRule(attributeFinder, "Boolean")
+            changed = 1
+            
+        case index("datetime,timestamp", finder, 1) > 0
+            @ME->addValidationRule(attributeFinder, "Timestamp")
+            attribute->displayTraits->append("timestamp")
+            changed = 1
+            
+        case index("date", finder, 1) > 0
+            @ME->addValidationRule(attributeFinder, "Date")
+            attribute->displayTraits->append("date", 1)
+            changed = 1
+            
+        case index("time", finder, 1) > 0
+            @ME->addValidationRule(attributeFinder, "Time")
+            attribute->displayTraits->append("time", 1)
+            changed = 1
+            
+        case index("phone", finder, 1) > 0 or index(oconv(label, "MCL"), "phone", 1) > 0
+            @ME->addValidationRule(attributeFinder, "PhoneNumber")
+            attribute->displayTraits->append("phone", 1)
+    
+    End Case
+        
+    if index("email", finder, 1) > 0 then @ME->addValidationRule(attributeFinder, "Email")
+    
+    return attribute
+]]></Implementation>
+</Method>
+</Class>
+</Export>

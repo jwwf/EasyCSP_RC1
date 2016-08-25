@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:27">
+<Class name="EasyCSP.Validator.Validators.Boolean">
+<Description>
+Use Cache rules to validate a boolean value. An empty string equates to 0/false and is valid.</Description>
+<Super>EasyCSP.Validator.Base</Super>
+<TimeChanged>64127,32043.501953</TimeChanged>
+<TimeCreated>63607,75410.091507</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    set attribute = ..init(parameters)
+    quit:attribute.hasErrors() attribute
+    
+    set value = attribute.value
+    if $get(value) = "" set value = 0
+    set value = $mvoconv(value, "MCN")
+    if (value=0)!(value=1) quit attribute
+    
+    do attribute.addError("Value must be ""true"" or ""false"".")
+    
+    quit attribute
+]]></Implementation>
+</Method>
+</Class>
+</Export>

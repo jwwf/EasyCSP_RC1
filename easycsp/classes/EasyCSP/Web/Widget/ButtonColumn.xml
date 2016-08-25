@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:39">
+<Class name="EasyCSP.Web.Widget.ButtonColumn">
+<Description><![CDATA[
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Web.Widget.Base</Super>
+<TimeChanged>64143,63605.251997</TimeChanged>
+<TimeCreated>63752,76719.883245</TimeCreated>
+
+<Method name="run">
+<Description><![CDATA[
+Constructs a button column. <variable>id</variable> is the key to the record
+in the current row. To override the default button set
+(delete, update, and view), supply a button configuration (see
+the <method>defaultButtons</method> below). The default set
+expects a route each for "delete", "update", and "view"/drill-down.
+The reguired "id" argument specifies the item id (or key) of the
+record in the row. "buttonConfig" is optional; if present, it specifies
+a custom set of buttons. This is an EasyCSP.Core.Array ergo buttons
+will be output in the order in which they are encountered in the array.
+The "targetController" argument specifies a controller different from
+the one creating the page.
+]]></Description>
+<FormalSpec>id:%String="",buttonConfig:EasyCSP.Core.Array="",targetController:%String=""</FormalSpec>
+<Implementation><![CDATA[
+        
+    quit:$get(id)="" ""
+    
+    if $get(targetController) '= "" {
+        set controllerId = targetController
+    } else {
+        set controllerId = %EasyCSPApp.controller.id
+    }
+    
+    set:$get(buttonConfig)="" buttonConfig = ..defaultButtons()
+    
+    set buttonOptions = ##class(EasyCSP.Core.HashArray).%New()
+    do buttonOptions.set("onclick", "activeButton();")
+    do buttonOptions.set("class", "activeButton")
+    
+    set key = buttonConfig.Next()
+    while key '= "" {
+        
+        set def = buttonConfig.get(key)
+        
+        if 'def.IsDefined("imageUrl") ! 'def.IsDefined("action") {
+            set key = buttonConfig.Next(key)
+            continue ; ignore poorly-formed definitions
+        }
+        
+        if def.IsDefined("label") {
+            set label = $mvoconv(def.get("label"), "MCT")
+        } else {
+            set label = $mvoconv(def.get("action"), "MCT")
+        }
+        
+        set imageName = def.get("imageUrl")
+        do buttonOptions.set("id", controllerId_"_"_def.get("action")_"_"_id)
+                
+        do ..addContent(..image(def.get("imageUrl"), label, buttonOptions))
+        
+        set key = buttonConfig.Next(key)
+        
+
+    }
+]]></Implementation>
+</Method>
+
+<Method name="defaultButtons">
+<Description><![CDATA[
+Returns a Core.ParameterList with one node per button to be displayed. Each
+node is in turn a core parameterList with the buttons to display, where to
+find them, and which actions to take. This routine is called if the <method>run</method>
+isn't supplied a ParameterList with a custom button setup.]]></Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[
+    
+    set output = ##class(EasyCSP.Core.Array).%New()
+    
+    do output.append(..defineButton("view", "View", "view.png"))
+    do output.append(..defineButton("update", "Update", "update.png"))
+    do output.append(..defineButton("delete", "Deactivate/Delete", "delete.png"))
+    
+    quit output
+]]></Implementation>
+</Method>
+
+<Method name="defineButton">
+<Description>
+Button images are located in .../csp/images/gridview. The controller action
+(without the "action" prefix, like "delete", "edit", etc) is also required.
+The button imageName is the file name of the image in the gridview directory.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>action:%String="",label:%String="",imageName:%String=""</FormalSpec>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(action)="" ""
+    set:$get(label)="" label = $mvoconv(action, "MCT")
+    quit:$get(imageName)="" ""
+    if $get(%EasyCSPApp)'="" {
+        set imageUrl = %EasyCSPApp.getImageUrl(1)_"gridview/"
+    } else {
+        set imageUrl = "" ; * for unit testing
+    }
+    
+    set rtn = ##class(EasyCSP.Core.HashArray).%New()
+    
+    do rtn.set("action", action)
+    do rtn.set("label", label)
+    do rtn.set("imageUrl", imageUrl_imageName)
+    
+    return rtn
+]]></Implementation>
+</Method>
+</Class>
+</Export>

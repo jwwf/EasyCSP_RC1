@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:29">
+<Class name="EasyCSP.Validator.Validators.InForeignKeyList">
+<Description>
+Ensure that the value in attribute.value exists in attribute.fkList. This is a double-check that the
+contents of a select box return are truly valid. This serves as bullet-proofing and penetration
+prevention by someone creating a form offline with hard-coded data in an attempt to jam junk
+into the database.
+
+To accomplish the check, add "InForeignKeyList" as a validation rule for a field using the
+foreign key name-value-pair list to populate a select box.</Description>
+<Super>EasyCSP.Validator.Base</Super>
+<TimeChanged>64127,63619.122023</TimeChanged>
+<TimeCreated>64113,60989.452145</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    
+    attribute = @ME->init(parameters)
+    value = raise(attribute->value)
+    
+    display = '"' : ereplace(attribute->fkValues->values(), @fm, '", "') : '"'
+    
+    numberOfValuesToTest = dcount(value,@fm)
+    
+    validValues = attribute->fkValues->keys()
+    
+    for idx = 1 to numberOfValuesToTest
+        test = value<idx>
+        find test in validValues setting amc else
+            attribute->addError(@ME->%ClassName() : ": '" : test: "' must be one of " : display)
+        end
+    Next
+    
+    return attribute
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:35">
+<Class name="EasyCSP.Views.Site.Closed">
+<Description>
+This page is displayed when a new user successfully registers with the system. The
+page will contain a link to click to activate the new account. The user will not be
+allowed to log in until activation has been done.</Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64146,68380.395455</TimeChanged>
+<TimeCreated>63600,37797.465482</TimeCreated>
+
+<Method name="run">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+	set ..pageTitle = "Site is Closed"
+	do ..addContent("<p>The site is currently closed for maintenance. We are working as quickly as possible to resolve any issues. Please try your request again later.</p>")
+	quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

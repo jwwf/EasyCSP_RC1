@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:33">
+<Class name="EasyCSP.Views.Default.QueryResult">
+<Description><![CDATA[
+Display EasyCSP settings and allow an administrator to change them. Settings changes
+are picked up on the next page load (regardless of viewer). These are global settings.
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64149,71158.703273</TimeChanged>
+<TimeCreated>64099,50595.898738</TimeCreated>
+
+<Method name="run">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    if $get(parameters) = "" set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    set queryId = parameters.get("queryId")
+    set:queryId="" queryId = ..data.get("queryId")
+    
+    if (queryId = "") {
+        do ..addContent("No items found. Check your query and try again. (code: "_queryId_")")
+        quit 1
+    }
+    
+    set controllerId = $mvoconv(%EasyCSPApp.controller.id,"MCT")
+    
+    set ..pageTitle = controllerId_" Query Result"
+    
+    do ..addContent("<h2>Query Result from "_controllerId_"</h2>")
+    
+    set url = %EasyCSPApp.getViewURL()
+    
+    // If the controller will allow the download of CSV files from the table view, it must
+    // do parameters.set("allowDownload", 1) before rendering the query result table view. 
+    if (parameters.get("allowDownload") = 1) { // & ($get(^queryOut(queryId, "status")) = "Complete") {
+        
+        do ..openTag("div")
+        do ..addContent("<button name=""getCSV"" id=""getCSV"" class=""blue"" style=""float: right; margin-right:25px;"">Download</button>")
+        do ..closeTag("div")
+
+        set location = %EasyCSPApp.getAppUrl()_"Queryresult/CSV"
+        if parameters.IsDefined("queryId") & (parameters.get("downloadName") '= "") {
+            set location = location _ "&queryId=" _ ..data.get("queryId")
+            set location = location _ "&downloadName=" _ parameters.get("downloadName")
+        }
+        
+        set outputStream = ##class(%GlobalCharacterStream).%New()
+        do outputStream.WriteLine("   $(""#getCSV"").click(function() {")
+        do outputStream.WriteLine("      window.location.href = '"_location_"';")
+        do outputStream.WriteLine("      return false;")
+        do outputStream.WriteLine("     }")
+        do outputStream.WriteLine("   );")
+        
+        do %EasyCSPApp.controller.layout.scripting.registerScript("csvscript", outputStream, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
+        
+    }
+        
+    set tableOptions = ##class(EasyCSP.Core.HashArray).%New()
+    do tableOptions.set("queryId", queryId)
+    do tableOptions.copyFrom(parameters)
+    
+    set activeTable = ##class(EasyCSP.Web.Widget.ActiveTable).%New(tableOptions)
+    
+    // Just establish the widget div area in the layout. JQuery will take care of the rest.
+    do ..addContent(activeTable.pageSetup())
+    
+    if +parameters.get("noCreate") = 0 {
+        set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+        do htmlOptions.set("class", "fleft")
+        do ..addContent(..tag("p", htmlOptions, ..routeLink("Create a new record", %EasyCSPApp.controller.id_"/create"), 1))
+    }
+        
+        
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

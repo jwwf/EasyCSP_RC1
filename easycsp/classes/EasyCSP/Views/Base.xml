@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:32">
+<Class name="EasyCSP.Views.Base">
+<Description><![CDATA[
+<p>
+This is the base class for all view pages. Any data the view will need, such as
+instances of models or other information for display or control should be placed
+in the <property>data</property> before calling the <method>run</method> method.
+</p>
+
+<p>
+All output is gathered into the <property>stream</property> property by using either the
+<method>addContent</method> or the <method>addStreamContent</method> method. Output is
+held until the layout calls the view's <method>render<method> method to build output into
+the resulting HTML page or report.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Abstract>1</Abstract>
+<Super>EasyCSP.Core.Component,EasyCSP.Rendering.HTML</Super>
+<TimeChanged>64133,38713.701761</TimeChanged>
+<TimeCreated>63541,82697.943671</TimeCreated>
+
+<Parameter name="liveEvents">
+<Description>
+Allow live events</Description>
+<Default>1</Default>
+</Parameter>
+
+<Property name="actionMap">
+<Description>
+Case-desensitized map to view or widget actions</Description>
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="data">
+<Description><![CDATA[
+Any data that should be passed down from the controller must exist
+in <property>data</property> <i>before</i> calling the <method>run</method> method.]]></Description>
+<Type>EasyCSP.Core.HashArray</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="formId">
+<Description>
+The id of the form that might be in the process of being generated
+or the id of the last form that was generated for this view.</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="jsMaskTypes">
+<Description><![CDATA[
+Client-side input masking. See <a href="https://igorescobar.github.io/jQuery-Mask-Plugin/">JQuery Mask Plug-in</a>
+for details. The Web.Widget.ControlGroup leverages this plug-in.]]></Description>
+<Type>EasyCSP.Core.HashArray</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="pageTitle">
+<Description><![CDATA[
+The title that should appear in the HTML &lt;head&gt; section title tag.]]></Description>
+<Type>%String</Type>
+</Property>
+
+<Method name="%OnNew">
+<Description><![CDATA[
+Instantiate a new view. Views should be created via the <class>EasyCSP.Views.Factory</class>
+The controller or layout instantiating the view should pass any model or other relevant data
+in via the <variable>data</variable> formal spec argument which is in turn an instance of an <class>EasyCSP.Core.HashArray</class>.]]></Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set ..stream = ##class(%GlobalCharacterStream).%New()
+    set ..data = parameters
+    do ..createActionMap()
+    
+    if ..hasMethod("afterConstruct") do $method($this, "afterConstruct")
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="createActionMap">
+<Description>
+An action is a key to a controller method that also starts with
+"action". That part is always lower-case. To remove case-sensitivity
+(and hard-to-find errors in execution), create a map where the
+normalized method name is a key to the method name as it appears
+in the controller extent class.</Description>
+<Language>mvbasic</Language>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    @ME->actionMap = "EasyCSP.Core.HashArray"->%New()
+    def = "%Dictionary.ClassDefinition"->%OpenId(@ME->getClassname())
+    methods = def->Methods
+    
+    methodKey = methods->Next("")
+    *crt "MethodKey:" : methodKey : "->":
+    Loop while methodKey <> "" do
+        methodDef = methods->GetAt(methodKey)
+        methodName = methodDef->Name
+        *crt methodName
+        if downcase(methodName[1,6]) = "action" or downcase(methodName[1,6])="widget" then
+            actionName = OCONV(methodName[7,99], "MCL")
+            @ME->actionMap->set(actionName, methodName)
+            @ME->actionMap->set(downcase(methodName), methodName)
+        end
+        methodKey = methods->Next(methodKey)
+    repeat
+    
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="getClassname">
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    quit $classname($this)
+]]></Implementation>
+</Method>
+
+<Method name="actionNameToMethod">
+<Description>
+Find the actual method name by lookup</Description>
+<FormalSpec>actionName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    quit ..actionMap.get($mvoconv(actionName, "MCL"))
+]]></Implementation>
+</Method>
+
+<Method name="columnToLabel">
+<Description>
+Input a column name the way it appears in the SQL table, for instance "vendor_id".
+The function will attempt to figure out how to break and capitalize the parts of
+the column name so it becomes an acceptable column label, for instance "Vendor Id".
+@param string $inputString
+@return string</Description>
+<FormalSpec>inputString:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+        if $get(inputString) = "" then
+            return ""
+        end
+
+        * Filter out everything but the dingbat characters. This will indicate
+        * where to break with a space and how to capitalize.
+        illegalCharacters = oconv(inputString, "MC/A") ; * all alphas are okay
+        illegalCharactes = oconv(illegalCharacters, "MC/N") ; * all numerics are okay
+        convert " " to "" in illegalCharacters ; * spaces are useful
+        
+        convert illegalCharacters to @fm in inputString
+        
+        return convert(@fm, " ", oconvs(inputString, "MCT"))
+]]></Implementation>
+</Method>
+
+<Method name="render">
+<Description>
+Returns the page content output stream. This stream is copied automatically in the
+controller base class to be emitted whole at the end of the page building process.</Description>
+<Final>1</Final>
+<FormalSpec>data:EasyCSP.Core.HashArray</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[    quit ..stream
+]]></Implementation>
+</Method>
+
+<Method name="resetStream">
+<Description>
+Clear the stream. This is only used for repetitive calls like button rendering</Description>
+<Implementation><![CDATA[    do ..stream.Clear()
+]]></Implementation>
+</Method>
+</Class>
+</Export>

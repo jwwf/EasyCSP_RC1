@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:14">
+<Class name="EasyCSP.Core.HashArray">
+<Description><![CDATA[
+Extends %ArrayOfDataTypes with some Python/Javascript/PHP -like features.
+This structure is similar to a Python dictionary structure.
+
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%Library.ArrayOfDataTypes</Super>
+<TimeChanged>64135,58381.22282</TimeChanged>
+<TimeCreated>64087,85605.552772</TimeCreated>
+
+<Method name="append">
+<Description>
+`Add a value to the end of the array</Description>
+<FormalSpec>key:%String="",value:%String=""</FormalSpec>
+<Implementation><![CDATA[
+    if $get(key) = "" quit
+    set i%Data(key) = value
+]]></Implementation>
+</Method>
+
+<Method name="copyFrom">
+<Description>
+Copy items from the source array into this array. Any existing
+data with the same key will be overwritten.</Description>
+<FormalSpec>sourceArray:EasyCSP.Core.HashArray</FormalSpec>
+<Implementation><![CDATA[
+    if $get(sourceArray) '[ "HashArray" quit
+    
+    set key = sourceArray.Next()
+    while key '= "" {
+        do ..set(key, sourceArray.get(key))
+        set key = sourceArray.Next(key)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="diff">
+<Description>
+Returns an array containing all the values that do not exist in
+both this array and the array passed in. Neither array is
+changed. NOTE: this returns a Core.Array, not a Core.HashArray.</Description>
+<FormalSpec>compareArray:EasyCSP.Core.HashArray</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    thisDyn = @ME->values()
+    thisDynLength = DCount(thisDyn, @fm)
+    
+    compareDyn = compareArray->values()
+    compareDynLength = DCount(compareDyn, @fm)
+    
+    if thisDynLength >= compareDynLength then
+        a = compareDyn
+        b = thisDyn
+        l = compareDynLength
+    end else
+        a = thisDyn
+        b = compareDyn
+        l = thisDynLength
+    end
+    
+    * Use the shorter array to traverse.
+    newArray = "EasyCSP.Core.Array"->%New()
+    for idx = 1 to l
+        find a<idx> in b setting AMC else
+            newArray->append(a<idx>)
+        end
+    next
+    
+    return newArray
+]]></Implementation>
+</Method>
+
+<Method name="dumpAsStream">
+<Description>
+Dump the contents of the array in a two-column (key and data)
+formatted HTML table.</Description>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set stream = ##class(%GlobalCharacterStream).%New()
+    
+    do stream.WriteLine("<table width=""100%"" class=""activeTable"">")
+    
+    set idx = ..Next("")
+    while idx '= "" {
+        set val = ..get(idx)
+        do stream.WriteLine("<tr>")
+        do stream.WriteLine("<td width=""25%"">"_idx_"</td>")
+        do stream.Write("<td>")
+        if $isobject(val) {
+            do stream.Write("[object]")
+        } else {
+            do stream.Write(val)
+        }
+        do stream.Write("</td>")
+        do stream.WriteLine("</tr>")
+        set idx = ..Next(idx)
+    }
+    
+    do stream.WriteLine("</table>")
+    
+    quit stream
+]]></Implementation>
+</Method>
+
+<Method name="get">
+<Description>
+Returns the value at a specific node in the array. If the key
+doesn't exist then an empty string is returned.</Description>
+<FormalSpec>key:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(key)="" ""
+    quit:'..IsDefined(key) ""
+    quit i%Data(key)
+]]></Implementation>
+</Method>
+
+<Method name="getAndRemove">
+<Description>
+Removes a key-value pair from the array and returns
+the value of the element that was removed. This is
+like pop()-ing or shift()-ing but from anywhere in
+the array. If the key-value pair exists, the array
+is shortened by one after the remove.</Description>
+<FormalSpec>key:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(key)="" ""
+    quit:'..IsDefined(key) ""
+    set value = i%Data(key)
+    do ..unset(key)
+    quit value
+]]></Implementation>
+</Method>
+
+<Method name="hasKey">
+<Description>
+Return TRUE (1) if the supplied key exists in the array</Description>
+<FormalSpec>key</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(key)="" 0
+    quit:..IsDefined(key) 1
+    quit 0
+]]></Implementation>
+</Method>
+
+<Method name="intersect">
+<Description>
+Returns a new array containing all the values that exist in
+both this array and the array passed in. Neither array is
+changed. NOTE: This returns a Core.Array, not a Core.HashArray.</Description>
+<FormalSpec>compareArray:EasyCSP.Core.HashArray</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    thisDyn = @ME->values()
+    thisDynLength = DCount(thisDyn, @fm)
+    
+    compareDyn = compareArray->values()
+    compareDynLength = DCount(compareDyn, @fm)
+    
+    if thisDynLength >= compareDynLength then
+        a = compareDyn
+        b = thisDyn
+    l = compareDynLength
+    end else
+        a = thisDyn
+        b = compareDyn
+        l = thisDynLength
+    end
+    
+    * Use the shorter array to traverse.
+    newArray = "EasyCSP.Core.Array"->%New()
+    for idx = 1 to l
+        find a<idx> in b setting AMC then
+            newArray->append(a<idx>)
+        end
+    next
+    
+    return newArray
+]]></Implementation>
+</Method>
+
+<Method name="isset">
+<Description>
+Wrapper for IsDefined</Description>
+<FormalSpec>key:%String=""</FormalSpec>
+<Implementation><![CDATA[
+    quit:$get(key)=""
+    quit ..IsDefined(key)
+]]></Implementation>
+</Method>
+
+<Method name="keys">
+<Description><![CDATA[
+Return a dynamic array of just the keys in the array. This is
+the opposite of <method>values</method> which returns just the
+values in the array.]]></Description>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    dynArray = ""
+    key = ""
+    
+    loop 
+        key = @ME->Next(key)
+    while key <> "" do
+        dynArray< -1 > = key
+    repeat
+    
+    return dynArray
+    
+    rtn = "EasyCSP.Core.Array"->%New()
+    return rtn->split(rtn, @fm)
+]]></Implementation>
+</Method>
+
+<Method name="keysAsArray">
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ##class(EasyCSP.Core.Array).%New()
+    set key = ..Next()
+    while key '= "" {
+        do rtn.append(key)
+        set key = ..Next(key)
+    }
+    
+    quit rtn
+]]></Implementation>
+</Method>
+
+<Method name="join">
+<Description><![CDATA[
+Returns the elements of the array in a delimited string. If
+a delimiter isn't supplied a comma is used. Any string of
+any length can be passed in <var>delimiter</var>.]]></Description>
+<FormalSpec>delimiter:%String=","</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    Dyn = @ME->toDynamicArray
+    d = dcount(Dyn, @fm)
+    
+    rtnDyn = ""
+    for idx = 1 to d
+        rtnDyn< -1 > = Dyn<idx,2> ; * pick out only the value
+    next
+    
+    rtnDyn = ereplace(rtnDyn, @am, delimiter)
+    
+    return rtnDyn
+]]></Implementation>
+</Method>
+
+<Method name="length">
+<Description>
+Wrapper for Count</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    quit ..Count()
+]]></Implementation>
+</Method>
+
+<Method name="pop">
+<Description>
+Pop a key-value pair off the end of the array and shorten the
+array by one. The key-value pair is returned as a single-attribute
+dynamic array with the key and value separated by a value mark.</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set key = $order(i%Data("",-1))
+    set value = ..Data(key)
+    do ..RemoveAt(key)
+    quit key _ $MVVM _ value
+]]></Implementation>
+</Method>
+
+<Method name="set">
+<Description>
+Adds an element or changes the value of an element in the array.</Description>
+<FormalSpec>key:%String="",value:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(key)="" $$$ERROR("Key can not be empty.")
+    set i%Data(key) = value
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="shift">
+<Description>
+Shifts a value off the beginning of the array and shortens
+the array by one. Returns the shifted key, a value mark,
+and the value. Keys are stored sorted naturally by Cache'
+so this is a pretty quick way of sorting by key.</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set key = ..Next("")
+    set value = ..GetAt(key)
+    do ..RemoveAt(key)
+    quit key _ $MVVM _value
+]]></Implementation>
+</Method>
+
+<Method name="toDynamicArray">
+<Description>
+Returns a string representation of the elements in the array
+delimited by attribute marks. Each attribute contains the 
+original key, a value mark, and the value.</Description>
+<FormalSpec>quoteStrings:%Boolean=0</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    rtnDyn = ""
+    
+    key = @ME->Next("")
+    
+    loop while key <> "" do
+    
+        value = @ME->GetAt(key)
+        
+        if quoteStrings then
+        
+            if (oconv(value, "MCN") <> value) then 
+                value = squote(value)
+            end
+            
+            if value = "" then value = '""'
+        end
+        
+        rtnDyn<-1> = key : @vm : value
+        key = @ME->Next(key)
+        
+    repeat
+    
+    return rtnDyn
+]]></Implementation>
+</Method>
+
+<Method name="toJSON">
+<Description>
+Returns a string in JSON where each attribute contains two values:
+key: value
+
+Strings are automatically quoted.</Description>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    nvPairs = @ME->toDynamicArray(1)
+    convert @vm:@fm to ":," in nvPairs
+    return "{" : nvPairs : "}"
+]]></Implementation>
+</Method>
+
+<Method name="unset">
+<Description>
+Remove a name-element pair from the array</Description>
+<FormalSpec>key:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(key)="" $$$ERROR("Key can not be empty.")
+    do ..RemoveAt(key)
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="unsetAll">
+<Description>
+Alias for .Clear()</Description>
+<Implementation><![CDATA[    do ..Clear()
+]]></Implementation>
+</Method>
+
+<Method name="values">
+<Description>
+Return a field-mark delimited dynamic array that has
+just the values in the hash array.</Description>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+   
+    dynArray = ""
+    key = ""
+    
+    key = @ME->Next("")
+    loop while key <> "" do
+        dynArray< -1 > = @ME->GetAt(key)
+        key = @ME->Next(key)
+    repeat
+    
+    return dynArray
+]]></Implementation>
+</Method>
+
+<Storage name="Custom">
+<Type>%Library.CompleteCustomStorage</Type>
+</Storage>
+</Class>
+</Export>

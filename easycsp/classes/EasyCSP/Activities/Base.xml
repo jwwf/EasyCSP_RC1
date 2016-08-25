@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:54">
+<Class name="EasyCSP.Activities.Base">
+<Description><![CDATA[
+<p>
+Abstract class for extending form worker classes. This class wrappers
+some of the typical model methods and properties while allowing a
+collection of models to be used in one page. This is the more common
+scenario in application development vs typical MVC "one controller,
+one model, many views" mindset.
+</p>
+
+<p>
+The same "afterConstruct" and "validationRules" events are also
+raised, allowing the child class to leverage the same post-construction
+and custom validation-rule procedures as single-record models.
+Additionally, a new event, "recordModels" is also raised, allowing
+the form to load all the record models it needs at once.
+</p>
+
+<p>
+While many of the record-model methods are emulated here, there is a
+large difference in the way .save() is handled. On .save(), all models
+are saved in one atomic transaction. If one model fails validation
+then no records are saved. If one model fails to save, then all
+record images are rolled back to their pre-save state. The error is
+reported via the same .hasErrors() and .getErrors() mechanisms as
+this class's record model counterparts. Please refer to
+<a href="http://docs.intersystems.com/latest/csp/docbook/DocBook.UI.Page.cls?KEY=RCOS_ctstart">
+TSTART</a> in the docbook.
+</p>
+
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>
+]]></Description>
+<Abstract>1</Abstract>
+<CompileAfter>EasyCSP.Core.Component</CompileAfter>
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>64152,52152.631432</TimeChanged>
+<TimeCreated>64111,61278.753078</TimeCreated>
+
+<Property name="attributeMap">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="columnOrder">
+<Description>
+Aggregated model columns</Description>
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Property name="hasChanged">
+<Description>
+Flags that data has changed in at least one attribute</Description>
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="models">
+<Description>
+The list of models this app needs</Description>
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Property name="modelId">
+<Description>
+Short class name</Description>
+<Type>%String</Type>
+</Property>
+
+<Method name="%OnNew">
+<Description>
+Emulate the record model on-new events</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set OK = $$$OK
+    
+    set ..modelId = ..%ClassName(1)
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set ..models = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // The model attribute properties are now known. Are there any validation rules to be applied?
+    if ..hasMethod("recordModels") {
+        try {
+            set OK = $METHOD($THIS,"recordModels")
+        } catch %EasyCSPException {
+            quit ; $$$ERROR("Exception in recordModels")
+        }
+    }
+    
+    // The model attribute properties are now known. Are there any validation rules to be applied?
+    if ..hasMethod("validationRules") {
+        try {
+            set OK = $METHOD($THIS,"validationRules")
+        } catch %EasyCSPException {
+            quit ; $$$ERROR("Exception in validationRules")
+        }
+    }
+    
+    // Last, if there is a user-written post-construct event to perform:
+    if ..hasMethod("afterConstruct") {
+        try {
+            set OK = $METHOD($THIS,"afterConstruct")
+        } catch %EasyCSPException {
+            quit ; $$$ERROR("Exception in validationRules")
+        }
+    }
+    
+    quit OK
+]]></Implementation>
+</Method>
+
+<Method name="addError">
+<Description>
+Add an error message to an attribute in one of the models.</Description>
+<FormalSpec>finder,message</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder)
+    set modelName = $piece(finder, "_", 1)
+    
+    set model = ..models.get(modelName)
+    do model.addError(finder, message)
+]]></Implementation>
+</Method>
+
+<Method name="addModel">
+<Description>
+Add a record model to the form model set. The familiar name
+that gets passed in is converted to lower case and is used
+as the model finder. The model's class base name is used to
+locate the model in the models array.</Description>
+<FormalSpec>modelName:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    quit:$get(modelName)="" 0
+    
+    do ..toggleDebug(0)
+    
+    if '..instanceOf(..columnOrder, "Core.Array") set ..columnOrder = ##class(EasyCSP.Core.Array).%New()
+    
+    set model = ##class(EasyCSP.Core.Component).objectFactory(modelName, "model", 1)
+    
+    set baseName = $mvoconv(model.%ClassName(0), "MCL")
+    
+    set copyMetadata = 1
+
+    do ..models.set(baseName, model)
+    
+    do ..columnOrder.appendFrom(model.columnOrder)
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="clearAll">
+<Description>
+Clear all error arrays in every model in this application.</Description>
+<Implementation><![CDATA[
+    set nextModel = ..models.Next()
+    while nextModel '= "" {
+        do ..models.get(nextModel).clearAll()
+        set nextModel = ..models.Next(nextModel)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="findAllByPK">
+<Description>
+All related records must have the same primary key. This is a
+typical case in related tables like users and shadow, or
+other table sets where information may be divided for security
+or convenience.</Description>
+<FormalSpec>id:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(id)="" 0
+    
+    set modelId = ..models.Next()
+    while modelId '= "" {
+        set m = ..models.get(modelId)
+        do m.read(id)
+        do ..models.set(modelId,m)
+        set modelId = ..models.Next(modelId)
+    }
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="findFinder">
+<FormalSpec>finder:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" ""
+    
+    if $length(finder, "_") = 1 set finder = ..modelId_"_"_finder
+    quit $mvoconv(finder, "MCL")
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeValue">
+<Description>
+Return the value of an attribute in one of the models. Model
+location is automatic.</Description>
+<FormalSpec>finder:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set modelName = $piece(finder, "_", 1)
+    //set attributeName = $piece(finder, "_", 2, *)
+    quit ..models.get(modelName).getAttributeValue(finder)
+]]></Implementation>
+</Method>
+
+<Method name="getTrait">
+<Description>
+Returns the value of a display trait in one of the attributes in one of the
+models in this application.</Description>
+<FormalSpec>finder:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set modelName = $piece(finder, "_", 1)
+    //set attributeName = $piece(finder, "_", 2, *)
+    quit ..models.get(modelName).getTrait(finder)
+]]></Implementation>
+</Method>
+
+<Method name="hasErrors">
+<Description>
+Returns TRUE (1) if there is at least one error in any attribute in
+any model. Stops and returns TRUE on the first error encountered.</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set hasErrors = 0
+    set nextModel = ..models.Next()
+    while nextModel '= "" {
+        if ..models.get(nextModel).hasErrors() {
+            set hasErrors = 1
+            quit
+        }
+        set nextModel = ..models.Next(nextModel)
+    }
+    quit hasErrors
+]]></Implementation>
+</Method>
+
+<Method name="loadFromArray">
+<Description>
+Pass in an array of name-value pairs as a Core.HashArray. If the name
+of the property or the finder-name matches the name in the name-value pair
+array, the model's corresponding property and framework attribute will be updated.</Description>
+<FormalSpec>parameterList:EasyCSP.Core.HashArray</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(parameterList)'["Array" quit 0
+
+    set idx = ..models.Next("")
+    while idx '= "" {
+        set model = ..models.get(idx)
+        do model.loadFromArray(parameterList)
+        do ..models.set(idx, model)
+        set idx = ..models.Next(idx)
+    }
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="removeModel">
+<Description>
+Remove a specified model from this application.</Description>
+<FormalSpec>modelName:%String=""</FormalSpec>
+<Implementation><![CDATA[
+    quit:$get(modelName)="" 0
+    do ..models.unset(modelName)
+]]></Implementation>
+</Method>
+
+<Method name="save">
+<Description><![CDATA[
+<p>Saves the model as a record in the database. Save() automatically calls <method>validate()</method>
+which in turn will run the before- and after-validate events if they exist. If validation fails at
+any step the save will not be performed and the model will have specific validation error messages
+loaded into the attribute "errors" location. This simplifies error display on an HTML form, allowing
+both a general "fix all these things before resubmitting" div and an individualized, per-field error
+report marking which fields should be fixed. This increases the likelihood of enforced data integrity
+within the database by pointing out specific errors on the web for for the user to correct.</p>
+
+<p>If validation passes on all attributes, <method>save()</method> will search for and run any
+before-save and after-save event handlers if such exist. Note: it is not an error if no before- or
+after-save event handler has been coded. These exist as hooks for the programmer to pre- or post-process
+model attribute data, such as setting default dates or status data.</p>]]></Description>
+<Final>1</Final>
+<FormalSpec>validate:%Boolean=1</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set lastModelId = ""
+    set model = ""
+    set OK = 0
+    
+    // All models must validate or none do
+    set nextModel = ..models.Next()
+    while nextModel '= "" {
+        set OK = ..models.get(nextModel).validate() // validate all attributes
+        quit:'OK
+        set nextModel = ..models.Next(nextModel)
+    }
+    
+    quit:'OK 0
+    
+    // If all models passed validation the save them in one transaction.
+    tstart
+    
+    set modelFinder = ..models.Next()
+    while modelFinder '= "" {
+        set model = ..models.get(modelFinder)
+        set OK = model.save()
+        quit:OK'=1
+        set modelFinder = ..models.Next(modelFinder)
+    }
+    
+    if OK = 1 {
+        tcommit
+    } else {
+        trollback
+    }
+    
+    quit OK
+]]></Implementation>
+</Method>
+
+<Method name="setTrait">
+<Description>
+Set a display trait for an attribute in one of the models. Specify the
+attribute name (which contains the name of the model it belongs to upon
+creation), the trait to be changed, and the value it should be changed to.</Description>
+<FormalSpec>finder:%String="",trait:%String="",value:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    
+    set modelName = $piece(finder, "_", 1)
+    
+    //do %EasyCSPApp.controller.debugInfo.WriteLine("<pre>finder: "_finder_"</pre>")
+    
+    quit ..models.get(modelName).setTrait(finder, trait, value)
+]]></Implementation>
+</Method>
+
+<Method name="validate">
+<Description>
+Run validation for every model in this application. </Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set OK = 0
+    
+    // All models must validate or none do
+    set nextModel = ..models.Next()
+    while nextModel '= "" {
+        set OK = OK + ..models.get(nextModel).validate() // validate all attributes
+        set nextModel = ..models.Next(nextModel)
+    }
+    
+    quit (OK=0)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

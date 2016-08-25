@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:31">
+<Class name="EasyCSP.Validator.Validators.inRange">
+<Description>
+Determines whether a numeric value (integer or float) lies within and inclusive of two boundary
+values. In parameters, set "min" and "max" numeric values. A copy of the attribute that was
+passed in will be passed back with any error messages.</Description>
+<Super>EasyCSP.Validator.Base</Super>
+<TimeChanged>64127,32621.846599</TimeChanged>
+<TimeCreated>64127,32621.846599</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    // The input value must be digits [0..9], "+", and "-"
+    set testAtb = ##class(EasyCSP.Validator.Validators.Numeric).run(parameters)
+    if testAtb.hasErrors() quit testAtb
+    
+    set attribute = ..init(parameters)
+
+    set value = attribute.value
+
+    // All test values must be numeric. Test the "min" and "max" values as well.
+    
+    set min = parameters.get("min")
+    if min = "" {
+        do attribute.addError("No minimum value was stated for range comparison. Notify support.")
+        quit attribute
+    }
+    
+    set testAtb.value = min
+    set testParameters = parameters
+    do testParameters.set("attribute", testAtb)
+    set testAtb = ##class(EasyCSP.Validator.Validators.Numeric).run(testParameters)
+    if testAtb.hasErrors() {
+        do attribute.addError("Minimum value must be numeric. Notify support.")
+        quit attribute
+    }
+
+    set max = parameters.get("max")
+    if min = "" {
+        do attribute.addError("No maximum value was stated for range comparison. Notify support.")
+        quit attribute
+    }
+    
+    set testAtb.value = max
+    set testParameters = parameters
+    do testParameters.set("attribute", testAtb)
+    set testAtb = ##class(EasyCSP.Validator.Validators.Numeric).run(testParameters)
+    if testAtb.hasErrors() {
+        do attribute.addError("Maximum value must be numeric. Notify support.")
+        quit attribute
+    }
+    
+    // If all the comparison elements have passed filtration then do the comparison.
+    if (value >= min) & (value <= max) {
+        quit attribute
+    }
+    
+    // Send back an error message if the prior test failed.
+    do attribute.addError(..%ClassName() _ ": " _ value _ " does not lie between " _ min _ " and " _ max _ " inclusive.")
+    
+    quit attribute
+]]></Implementation>
+</Method>
+</Class>
+</Export>

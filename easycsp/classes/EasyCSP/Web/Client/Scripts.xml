@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:38">
+<Class name="EasyCSP.Web.Client.Scripts">
+<Description>
+Manages the output of scripts into a page.
+TODO: script rendering for posLoad and posBody</Description>
+<Super>EasyCSP.Core.Component,EasyCSP.Rendering.HTML,EasyCSP.Web.Client.ScriptQueue,EasyCSP.Web.Client.ScriptFileQueue,EasyCSP.Web.Client.CSSQueue</Super>
+<TimeChanged>64140,56914.19937</TimeChanged>
+<TimeCreated>63482,26517.887201</TimeCreated>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+/   The "pos" parameters indicate where the script should be output
+/   in the page at rendering time. Scripts can be automatically
+/   placed at one of five positions: in the head section, between
+/   the head and body tags, just after the body opening tag, or
+/   just after the body closing tag.
+*/
+]]></Content>
+</UDLText>
+
+<Parameter name="posHead">
+<Description>
+Within the head section</Description>
+<Type>%Integer</Type>
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="posBegin">
+<Description>
+Between the closing head tag and the opening body tag</Description>
+<Type>%Integer</Type>
+<Default>2</Default>
+</Parameter>
+
+<Parameter name="posLoad">
+<Description>
+Just after the body opening tag</Description>
+<Type>%Integer</Type>
+<Default>3</Default>
+</Parameter>
+
+<Parameter name="posEnd">
+<Description>
+Just before the body closing tag</Description>
+<Type>%Integer</Type>
+<Default>4</Default>
+</Parameter>
+
+<Parameter name="posReady">
+<Description>
+Just after the body closing tag</Description>
+<Type>%Integer</Type>
+<Default>5</Default>
+</Parameter>
+
+<Property name="baseURL">
+<Description><![CDATA[
+Set this if relative paths can't be used or the
+js directory is not .../csp/<i>application</i>/js]]></Description>
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+
+<Property name="coreScriptBaseUrl">
+<Description><![CDATA[
+Set this if relative paths can't be used or the
+js directory is not .../csp/<i>application</i>/js]]></Description>
+<Type>%String</Type>
+<InitialExpression>"js"</InitialExpression>
+</Property>
+
+<Property name="defaultScriptFileposition">
+<Type>%Integer</Type>
+<InitialExpression>1</InitialExpression>
+</Property>
+
+<Property name="defaultScriptposition">
+<Type>%Integer</Type>
+<InitialExpression>2</InitialExpression>
+</Property>
+
+<Property name="hasScripts">
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="packages">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Method name="%OnNew">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    d ..reset()
+    do ..initCorePackages() ; make packaged scripts available for call-in
+    do ..initCoreCSSPackages() ; call in the supplied css files the framework needs in order to function
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="renderAt">
+<FormalSpec>position:%Integer=1</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set output = ##class(%GlobalCharacterStream).%New()
+    do:position=1 output.CopyFrom(..renderCSS())
+    do output.MoveToEnd()
+    do output.CopyFrom(..renderScriptFiles(position))
+    do output.MoveToEnd()
+    do output.CopyFrom(..renderScripts(position))
+    do output.Rewind()
+    quit output
+]]></Implementation>
+</Method>
+
+<Method name="reset">
+<Implementation><![CDATA[
+    set ..hasScripts = 0
+    set ..CSSFilesQueue = ##class(EasyCSP.Core.Array).%New()
+    set ..scriptFilesQueue = ##class(EasyCSP.Core.Array).%New()
+    set ..scriptQueue = ##class(EasyCSP.Core.Array).%New()
+    set ..stream = ##class(%GlobalCharacterStream).%New()
+]]></Implementation>
+</Method>
+</Class>
+</Export>

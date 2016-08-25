@@ -1,0 +1,1001 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:19">
+<Class name="EasyCSP.Model.attributeFunctions">
+<Description><![CDATA[
+Methods and functions for manipulating model attributes. This was moved from the model base
+so forms and other model types can share attribute-handling methodologies.
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Abstract>1</Abstract>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64152,27386.833414</TimeChanged>
+<TimeCreated>64118,50899.910421</TimeCreated>
+
+<Method name="addAttribute">
+<Description>
+Add a non-record attribute after the model is instantiated. This is used for
+forms and applications. This kind of attribute is ignored for saves and is
+not associated with a class property.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    if parameters.get("name") = "" {
+        throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "NEWATB", $STACK($STACK(-1)-1,"LOCATION"), "addAttribute() was called with no name")
+    }
+    
+    do:parameters.get("label")="" parameters.set("label", "Enter password again")
+    do:parameters.get("name")="" parameters.set("name", ..modelId_"_cpassword")
+    do:parameters.get("order")="" parameters.set("order", -1)
+    do:parameters.get("readonly")="" parameters.set("readonly", 0)
+    do:parameters.get("required")="" parameters.set("required", 1)
+    do:parameters.get("searchable")="" parameters.set("searchable", 0)
+    do:parameters.get("tooltip")="" parameters.set("tooltip", "Type the same password again. The form will not submit until the passwords match exactly.")
+    do:parameters.get("type")="" parameters.set("type", "string")
+    do:parameters.get("unique")="" parameters.set("unique", 0)
+    do:parameters.get("width")="" parameters.set("width", 25)
+    set attribute = ##class(EasyCSP.Model.attribute).%New(parameters)
+    
+    do ..attributes.set(attribute.name, attribute)
+]]></Implementation>
+</Method>
+
+<Method name="addConversion">
+<Description>
+Add a Pick/MV conversion to an attribute. This is used similarly to
+conversions in a DICT item. The use will eventually be expanded to
+do conversions on input.</Description>
+<FormalSpec>finder,conversion</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)=""
+    set finder = ..findFinder(finder)
+    quit:$get(conversion)=""
+    
+    set atb = ..attributes.get(finder)
+    quit:atb="" 0
+    
+    do atb.conversions.append(conversion)
+    do ..attributes.set(finder, atb)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="addConverter">
+<Description>
+Add a Pick/MV conversion to an attribute. This is used similarly to
+conversions in a DICT item. The use will eventually be expanded to
+do conversions on input.</Description>
+<FormalSpec>finder,conversion</FormalSpec>
+<Implementation><![CDATA[
+    quit:$get(finder)=""
+    set finder=$MVOCONV(finder, "MCL")
+    quit:$get(conversion)=""
+    quit:..attributes.IsDefined(finder)=0
+    set atb = ..attributes.get(finder)
+    do atb.converters.append(conversion)
+    do ..setAttribute(atb)
+]]></Implementation>
+</Method>
+
+<Method name="addError">
+<Description>
+Add an error message to the array of error messages in an
+attribute. This is usually done automatically by attribute
+validators but could be used to display important information
+to a page at any time.</Description>
+<FormalSpec>finder,message</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" 0
+    
+    do attribute.errors.append(message)
+    
+    do ..setAttribute(attribute)
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="addValidationRule">
+<Description><![CDATA[
+///////////////////////////////////////////////////////////////////////////
+<p>Validation rules. Multiple rules per attribute may be specified. Validators
+must exist either as a class in the local namespace or as a class in the 
+EasyCSP.Validator.Validators package. To add a new validation rule,
+one can create a new class to handle the rule in the local namspace. When
+adding a rule to a model in this case, state the fully-qualified class name.</p>
+<p>addValidationRule() will look for the user override first. If the stated
+class does not exist in the local namespace this function will look in the
+framework-supplied rules in the EasyCSP.Validator.Validators package.
+Any new rule will be automatically detected and immediately available upon compile.<p>
+<p><strong>Do not place override rules in the EasyCSP.Validator.{<i>place</i>}
+package. They will be overwritten or removed on package update.</strong> Add
+custom rules in the user namespace.</p>
+
+<p>Specify both attributes and scenario as a comma-separated string. At least one attribute
+must be specified in the attribute parameter or an error will be returned. If the
+scenario is not specified, a default of "new,save,insert,update" will be used.</p>
+///////////////////////////////////////////////////////////////////////////]]></Description>
+<Final>1</Final>
+<FormalSpec>attributes,rule:%String,scenario:%String="new,save,insert,update",parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(attributes)="" $$$ERROR(1, "Specify which attribute to which the error should be appended.")
+    quit:$get(rule)="" $$$ERROR(2, "Specify the validation rule to be applied.")
+    
+    if $get(scenario) = "" set scenario = "new,save,insert,update"
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set attributeList = ##class(EasyCSP.Core.Array).%New()
+    do attributeList.split(attributes)
+    
+    set nextAttribute = attributeList.Next()
+    while nextAttribute '= "" {
+        
+        set finder = attributeList.get(nextAttribute)
+        set atb = ..getAttribute(finder)
+        
+        if atb = "" {
+            set message = finder _ " is not defined."
+            //throw ##class(EasyCSP.Core.Exception).%New(message)
+            set nextAttribute = attributeList.Next(nextAttribute)
+            continue
+        }
+        
+        do atb.addValidator(rule, scenario, parameters)
+        
+        set nextAttribute = attributeList.Next(nextAttribute)
+        
+    }
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="clearAll">
+<Description>
+Clears all error message and conditions</Description>
+<Implementation><![CDATA[
+    do ..ClearConditions()
+    do ..clearErrors()
+]]></Implementation>
+</Method>
+
+<Method name="clearErrors">
+<Description>
+Arbitrarily clear all errors in all attributes</Description>
+<Implementation><![CDATA[
+    set finder = ""
+    
+    for  {
+        set finder = ..attributes.Next(finder)
+        quit:finder=""
+        
+        set item = ..attributes.get(finder)
+        do item.errors.clear()
+        do ..attributes.SetAt(item,finder)
+    
+    }
+        
+    quit
+]]></Implementation>
+</Method>
+
+<Method name="findFinder">
+<FormalSpec>finder:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" ""
+    
+    if $length(finder, "_") = 1 set finder = ..modelId_"_"_finder
+    quit $mvoconv(finder, "MCL")
+]]></Implementation>
+</Method>
+
+<Method name="formatErrors">
+<Description>
+Puts all the error messages raised into a stream for display.</Description>
+<Language>cache</Language>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ##class(%GlobalCharacterStream).%New()
+    set errors = ..getErrors()
+    set idx = errors.Next("")
+    while idx '= "" {
+        set errorLine = errors.GetAt(idx)
+        set line = $mvfmt($piece(errorLine,$char(254),1), "20 L") _ " - " _ $mvfmt($piece(errorLine,$char(254),2), "80 L")
+        do rtn.WriteLine(line)
+        set idx = errors.Next(idx)
+    }
+    
+    do rtn.Rewind()
+    
+    quit rtn
+]]></Implementation>
+</Method>
+
+<Method name="getAttribute">
+<Description>
+Return the entire property information about an attribute. The name is not case-sensitive. This removes one of the programmatic
+pains in application coding.</Description>
+<FormalSpec>finder:%String</FormalSpec>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder) // lower-case the name to access the finder-node
+    set obj = ..attributes.get(finder)
+    quit:$IsObject(obj) obj
+    quit "" // return nothing if the attribute doesn't exist
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeFinders">
+<Description>
+Return a list of attribute finders</Description>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[    quit ..attributes.keysAsArray()
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeLabel">
+<Description>
+Return the label of an attribute, ready to use in a web page as a label for a text-box control.
+Default labels are first taken from the child-class property attribute "SqlFieldName" after running
+that value through a conversion to make the label user-friendly. The description of the field
+(to be used as a tooltip) is taken from the DESCRIPTION property attribute.</Description>
+<FormalSpec>finder:%String="",sqlName:%Boolean=0</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set attribute = ..getAttribute(..findFinder(finder))
+    set sqlName = +sqlName
+    
+    if $get(attribute)'="" {
+        quit:sqlName attribute.sqlFieldName
+        quit:attribute.label
+    }
+    quit "" // return nothing if the attribute doesn't exist
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeLabels">
+<Description>
+Return a list of all the attribute names.</Description>
+<FormalSpec>sqlNames:%Boolean=0</FormalSpec>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ""
+    set build = ##class(EasyCSP.Core.Array).%New() // to set attributes in storage order
+    
+    
+    // find all the published attributes
+    set finder = ..attributes.Next("")
+    while finder '= "" {
+        set attribute = ..attributes.get(finder)
+        if +sqlNames {
+            do build.set(attribute.sqlFieldName, attribute.label)
+        } else {
+            do build.set(finder, attribute.label)
+        }
+        set finder = ..attributes.Next(finder)
+    }
+    
+    quit build
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeName">
+<Description>
+Return the name of an attribute, ready to use in a web page as a label for a text-box control.
+Default labels are first taken from the child-class property attribute "SqlFieldName" after running
+that value through a conversion to make the label user-friendly. If "sqlName" is set to 1
+(TRUE) then the SQL column name of the attribute is returned instead.</Description>
+<FormalSpec>finder:%String="",sqlName:%Boolean=0</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set attribute = ..getAttribute(..findFinder(finder))
+    set sqlName = +sqlName
+    
+    if $get(attribute)'="" {
+        quit:sqlName attribute.sqlFieldName
+        quit:attribute.name
+    }
+    quit "" // return nothing if the attribute doesn't exist
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeNames">
+<Description>
+Return a list of all the attribute names.</Description>
+<FormalSpec>sqlNames:%Boolean=0</FormalSpec>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ""
+    set build = ##class(EasyCSP.Core.Array).%New() // to set attributes in storage order
+    
+    
+    // find all the published attributes
+    set finder = ..attributes.Next("")
+    while finder '= "" {
+        set attribute = ..attributes.get(finder)
+        if +sqlNames {
+            do build.append(attribute.sqlFieldName)
+        } else {
+            do build.append(attribute.name)
+        }
+        set finder = ..attributes.Next(finder)
+    }
+    
+    quit build
+]]></Implementation>
+</Method>
+
+<Method name="getAttributes">
+<Description>
+Returns an EasyCSP.Core.HashArray collection name-object pairs. The key is the
+lower-case "finder". The value at each node is the current value of that model attribute.</Description>
+<Final>1</Final>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[    quit ..attributes
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeTooltip">
+<Description>
+Return the long description of an attribute. The attribute name is not case-sensitive. 
+The value of this field is taken from the extended %Persistent class property "DESCRIPTION"
+attribute. </Description>
+<FormalSpec>finder:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(attribute)="" ""
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)'="" attribute.tooltip
+    quit "" // return nothing if the attribute doesn't exist
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeType">
+<Description>
+Return the type of an attribute. The name is not case-sensitive. This removes one of the programmatic
+pains in application coding.</Description>
+<FormalSpec>finder:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(attribute)="" ""
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)'="" attribute.type
+    quit "" // return nothing if the attribute doesn't exist
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeValue">
+<Description>
+Return the value of an attribute. The name is not case-sensitive. This removes one of the programmatic
+pains in application coding.</Description>
+<FormalSpec>finder:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    
+    quit:$get(finder)="" ""
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)'="" attribute.value
+    quit "" // return nothing if the attribute doesn't exist
+]]></Implementation>
+</Method>
+
+<Method name="getAttributeValues">
+<Description>
+Returns an EasyCSP.Core.HashArray collection name-value pairs. The key is the
+lower-case "finder". The value at each node is the current value of that model attribute.</Description>
+<Final>1</Final>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[
+    set rtnArray = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set nextAttribute = ..attributes.Next("")
+    while nextAttribute '= "" {
+        do rtnArray.set(nextAttribute, ..getAttributeValue(nextAttribute))
+        set nextAttribute = ..attributes.Next(nextAttribute)
+    }
+    
+    quit rtnArray
+]]></Implementation>
+</Method>
+
+<Method name="getErrors">
+<Description>
+Gets an EasyCSP.Core.Array of errors for one attribute.</Description>
+<Final>1</Final>
+<FormalSpec>attribute:%String=""</FormalSpec>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    set finder = $MVOCONV($get(attribute),"MCL") // lower-case the name to access the finder-node
+    set rtnArray = ##class(EasyCSP.Core.Array).%New()
+    set count = 0
+    
+    // if the attribute was specified check only that and stop
+    if finder '= ""
+    {
+         do gatherErrors
+         quit rtnArray
+    } else {
+        set finder = ..attributes.Next("")
+        while finder '= "" {
+            do gatherErrors
+            set finder = ..attributes.Next(finder)
+        }
+    }
+    
+    quit rtnArray
+    
+gatherErrors
+        set atb = ..attributes.get(finder)
+    if atb '= "" {
+        quit:atb.hasErrors()=0
+    }
+        
+    for e = 1:1:atb.errors.length() {
+        set count = count + 1
+        do rtnArray.append(atb.label_$MVFM_atb.errors.get(e))
+    }
+]]></Implementation>
+</Method>
+
+<Method name="getLabels">
+<Description>
+Returns a hash-array collection as name-value pairs. The key is the
+"finder" (lower case) attribute name. The value at that key is the generated
+label for that attribute.</Description>
+<Final>1</Final>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[
+    
+    set rtnArray = ##class(EasyCSP.Core.HashArray).%New()
+    set finder = ..attributes.Next("")
+    while finder '= "" {
+        do rtnArray.set(finder, ..getAttributeLabel(finder))
+        set finder = ..attributes.Next(finder)
+    }
+    
+    quit rtnArray
+]]></Implementation>
+</Method>
+
+<Method name="getTrait">
+<Description>
+Return the display trait assigned to an attribute. A trait could be
+"nodisplay" or "hidden", "multiselect", or other signal or HTML-producing
+quality used by the control generator.</Description>
+<FormalSpec>finder:%String="",trait:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" ""
+    quit:$get(trait)="" ""
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" ""
+    quit attribute.displayTraits.get(trait)
+]]></Implementation>
+</Method>
+
+<Method name="getValidationRules">
+<Final>1</Final>
+<FormalSpec>finder:%String=""</FormalSpec>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:attribute=""
+    
+    quit attribute.validationRules
+]]></Implementation>
+</Method>
+
+<Method name="hasConversion">
+<FormalSpec>finder</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder)
+    quit:..getAttribute(finder)=""
+    set atb = ..getAttribute(finder)
+    quit:atb.conversions.Count()>0 1
+    quit 0
+]]></Implementation>
+</Method>
+
+<Method name="hasConverter">
+<FormalSpec>finder</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder)
+    quit:..getAttribute(finder)=""
+    set atb = ..getAttribute(finder)
+    quit:atb.converters.Count()>0 1
+    quit 0
+]]></Implementation>
+</Method>
+
+<Method name="hasErrors">
+<Description>
+///////////////////////////////////////////////////////////////////////////
+Error tracking. Multiple errors may be registered per attribute if the
+contents of the attribute has more than one rule. Returns TRUE if at least
+one error is present in the model.
+///////////////////////////////////////////////////////////////////////////</Description>
+<Final>1</Final>
+<FormalSpec>finder:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder) // lower-case the name to access the finder-node
+    
+    // if the attribute was specified check only that and stop
+    if finder '= ""
+    {
+        set item = ..getAttribute(finder)
+        quit:$get(item)="" 0
+        quit (item.errors.length() > 0)
+    
+    }
+    set hasErrors = 0
+    
+    set nextAttribute = ..attributes.Next("")
+    while nextAttribute '= "" {
+        set atb = ..attributes.get(nextAttribute)
+        if atb.errors.length() > 0 {
+            set hasErrors = 1
+            quit
+        }
+        set nextAttribute = ..attributes.Next(nextAttribute)
+    }
+    
+    quit hasErrors
+]]></Implementation>
+</Method>
+
+<Method name="hasValidationRule">
+<Description><![CDATA[
+This method determines if at least one attribute has a validation rule. If
+<i>attribute</i> is empty or the name contained in that parameter is not an
+attribute in <property>..metadata.attributes</property> the return is 0. If the
+parameter contains a valid property name then only that attribute is checked.
+If the attribute parameter is empty, all attributes are checked. If at least one
+attribute has a validation rule then 1 is returned.]]></Description>
+<Final>1</Final>
+<FormalSpec>finder:%String="",ruleName:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder)
+    set:$get(ruleName)="" ruleName = "" ; make sure it's initialized
+    
+    set atb = ..getAttribute(finder)
+    quit:atb=""
+    quit:ruleName="" (atb.validationRules.length() > 0)
+    
+    set hasRule = 0
+    set idx = atb.validators.Next("")
+    while idx '= "" {
+        set rule = atb.validators.get(idx)
+        if $mvoconv(rule.ruleClass, "MCL") = $mvoconv(ruleName, "MCL") {
+            set hasRule = 1
+            quit
+        }
+        set idx = atb.validators.Next(idx)
+    }
+    quit hasRule
+]]></Implementation>
+</Method>
+
+<Method name="hasValidationRules">
+<Description>
+Return TRUE if at least one validation rule exists.</Description>
+<FormalSpec>finder:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder)
+    set atb = ..getAttribute(finder)
+    quit:atb="" 0
+    quit:atb.validators.Count()=0 0
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="markUnsearchable">
+<Description>
+Set this to TRUE if the attribute is not to be used for searches.</Description>
+<FormalSpec>finder:%String=""</FormalSpec>
+<Implementation><![CDATA[
+    quit:$get(finder)=""
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)=""
+    
+    set attribute.searchable = 0
+    do ..setAttribute(attribute)
+]]></Implementation>
+</Method>
+
+<Method name="loadFKValues">
+<Description>
+Load an attribute's foreign-key/description list. Pass in the attribute
+finder name and an EasyCSP.Core.HashArray loaded with name-value pairs.</Description>
+<FormalSpec>finder:%String="",nameValuePairs:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    quit:$get(finder)=""
+    quit:$get(nameValuePairs)=""
+    quit:nameValuePairs.length()=0
+    
+    quit:'..attributes.IsDefined(finder)
+    
+    set finder = ..findFinder(finder)
+    
+    set atb = ..attributes.get(finder)
+    set atb.fkValues = nameValuePairs
+    do ..attributes.set(finder, atb)
+]]></Implementation>
+</Method>
+
+<Method name="loadFromArray">
+<Description>
+Pass in an array of name-value pairs as a Core.ParameterList. If the name
+of the property or the finder-name matches the name in the name-value pair
+array, the model's corresponding property and framework attribute will be updated.</Description>
+<FormalSpec>parameterList:EasyCSP.Core.HashArray</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(parameterList)'["Array" quit 0
+
+    set finder = parameterList.Next("")
+    while finder '= "" {
+        set loc = ..findFinder(finder)
+        set value = parameterList.get(finder)
+        do ..setAttributeValue(loc, value)
+        set finder = parameterList.Next(finder)
+    }
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="removeConversion">
+<FormalSpec>finder,MVConversion:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(MVConversion)="" 0
+    
+    set finder = ..findFinder(finder)
+    set atb = ..getAttribute(finder)
+    quit:atb=""
+    
+    set key = atb.conversions.find(MVConversion)
+    do:key'=0 atb.conversions.remove(key)
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="removeConverter">
+<FormalSpec>finder,converter:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(MVConversion)="" 0
+    
+    set finder = ..findFinder(finder)
+    set atb = ..getAttribute(finder)
+    quit:atb=""
+    
+    set key = atb.converters.find(converter)
+    do:key'=0 atb.converters.remove(key)
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="setAttribute">
+<Description>
+Add or overwrite an attribute object.</Description>
+<FormalSpec>attribute:EasyCSP.Model.attribute</FormalSpec>
+<Implementation><![CDATA[
+    quit:'..instanceOf(attribute, "EasyCSP.Model.attribute")
+    set finder = ..findFinder(attribute.name)
+    do ..attributes.set($mvoconv(finder, "MCL"), attribute)
+]]></Implementation>
+</Method>
+
+<Method name="setAttributeValue">
+<Description>
+Sets the value of a model attribute to the value passed in. Performs
+validation before returning. If the new value fails validation, the
+former value is unchanged.</Description>
+<FormalSpec>finder:%String,value</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" 0
+    set oldValue = attribute.value
+    
+    if ..instanceOf(value, "Array") {
+        set value = $MVLOWER(value.toDynamicArray())
+        set attribute.value = value
+    } else {
+        
+        // Some controls and also input pages with repeating groups of input names
+        // will return their values delimited with attribute marks. Lower these to
+        // value marks to keep the MV record properly aligned.
+        if $find(value, $mvfm) > 0 set value = $mvlower(value)
+        set attribute.value = value
+    }
+        
+    do ..setAttribute(attribute)
+    
+    set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    do parameters.set("model", $this)
+    if attribute.validate(parameters) = 0 {
+        //set attribute.value = oldValue
+        quit 0
+    }
+    
+    ; * bypass any setter since validation must pass to get here
+    set propertyName = attribute.name
+    
+    // For MV records, serialized collection properties need to be
+    // deserialized. In MV terms, multivalue attributes have to be
+    // mapped from and back into Cache collection properties
+    if attribute.collection = "" { // if this is not a multivalued attribute
+        set:..hasProperty(propertyName) $PROPERTY($THIS,propertyName) = value
+    } else {
+        if $get(value) '="" {
+            set command = "do .."_propertyName_".DeSerialize($listFromString("""_value_""",$mvfm))"
+            xecute:..hasProperty(propertyName) command
+        } else {
+            //set command = "set .."_propertyName_" = """
+            set:..hasProperty(propertyName) $property(,propertyName) = value
+        }
+        
+    }
+    
+    if ..isMV & ..hasProperty("Record") {
+        set rec = $property(,"Record")
+        set amc = attribute.order
+        
+        if amc = 0 { // this is a key
+            if value '= "" set:..hasProperty("key") $property(,"Key") = value
+        } else {
+            set $p(rec, $mvfm, amc) = value
+        }
+        
+        if rec '= $property(,"Record") {
+            set $property(,"Record") = rec
+        }
+    }
+    
+    set ..hasChanged = 1
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="setClientValidation">
+<Description>
+Add or set a request for the HTML generator to add a JQuery client-side validator.</Description>
+<FormalSpec>finder:%String="",validatorName:%String="",parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" 0
+    quit:$get(validatorName)="" 0
+    quit:$get(parameters)="" 0 ; hedge against unassigned variables
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" 0
+    do attribute.clientValidation.set(validatorName, parameters)
+    do ..attributes.set(finder, attribute)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="setKeyOf">
+<Description>
+Pass in the base name of a model where this attribute value should
+also exist as a key. This will save the base name of the model so it
+can be located at validation time. Both this method and the isKeyOf()
+validator use the object factory so framework search rules apply.</Description>
+<FormalSpec>finder:%String="",modelBaseName:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" 0
+    quit:$get(modelBaseName)="" 0
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" 0
+    
+    set model = ##class(EasyCSP.Core.Component).objectFactory(modelBaseName, "model")
+    quit:$get(model)="" 0
+    
+    set model = "" ; get rid of the oref since it's no longer needed
+    
+    set attribute.keyOf = modelBaseName
+    do attribute.addValidator("isKeyOf")
+    do ..setAttribute(attribute)
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="setLabel">
+<Description>
+Change the default label to any other text</Description>
+<Final>1</Final>
+<FormalSpec>finder:%String="",text:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" 0
+    quit:$get(text)="" 0
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" 0
+    do attribute.label.set(text)
+    do ..attributes.set(finder, attribute)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="setTooltip">
+<Description>
+Set or change the tooltip for an attribute</Description>
+<Final>1</Final>
+<FormalSpec>finder:%String="",text:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" 0
+    quit:$get(text)="" 0
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" 0
+    do attribute.tooltip.set(text)
+    do ..attributes.set(finder, attribute)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="setTrait">
+<Description>
+Add or set a display trait.</Description>
+<FormalSpec>finder:%String="",trait:%String="",value:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" 0
+    quit:$get(trait)="" 0
+    set:$get(value)="" value = "" ; hedge against unassigned variables
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" 0
+    do attribute.displayTraits.set(trait,value)
+    do ..attributes.set(finder, attribute)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="unsetTrait">
+<Description>
+Add or set a display trait.</Description>
+<FormalSpec>finder:%String="",trait:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(finder)="" 0
+    quit:$get(trait)="" 0
+    
+    set finder = ..findFinder(finder)
+    
+    set attribute = ..getAttribute(finder)
+    quit:$get(attribute)="" 0
+    do attribute.displayTraits.unset(trait)
+    do ..attributes.set(finder, attribute)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="validate">
+<Description><![CDATA[
+<p>The validate method can be called any time. It is especially useful in AJAX validation
+of form data before submission. Validate is called automatically at the beginning of 
+the <method>save()</method> process.</p>
+<p>Validate searches for and runs the <method>beforeValidate()</method> and <method>afterValidate()</method> event handlers
+if either exists in the user model-level code. Validation rules are set up in the
+<method>setValidation()</method> event if the user model-level code has coded it when the model object
+is instantiated. (The process is in the final method %OnNew()</method>.)</p>
+The <method>beforeValidate()</method> and <method>afterValidate()</method> events are only run if the attribute to validate
+has not been specified. The <method>save()</method> process calls the <method>validate()</method>]]></Description>
+<Final>1</Final>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set OK = 1
+    if $get(parameters) = "" set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    if ..hasMethod("beforeValidate") {
+        set:..hasMethod("beforeValidate") OK = $METHOD(,"beforeValidate", parameters)
+        quit:'OK OK
+    }
+    
+    set finder = ..attributes.Next()
+    set errorCount = 0
+    while finder '= "" {
+        set errorCount = errorCount + '..validateAttribute(finder, parameters)
+        set finder = ..attributes.Next(finder)
+    }
+    
+    if errorCount = 0 {
+        if ($get(attribute) '= "") {
+            set:..hasMethod("afterValidate") OK = $METHOD(,"afterValidate", parameters)
+        }
+    }
+    
+    quit (errorCount=0)
+]]></Implementation>
+</Method>
+
+<Method name="validateAttribute">
+<FormalSpec>finder:%String="",parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(finder) = "" quit 0
+    set OK = 1
+    
+    set finder = ..findFinder(finder)
+    
+    set atb = ..getAttribute(finder)
+    
+    quit:$get(atb)="" OK
+    
+    do atb.clearErrors()
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    do parameters.set("model", $this)
+
+    set OK = atb.validate(parameters)
+    do ..setAttribute(atb) ; carry the error messages forward
+    
+    quit OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

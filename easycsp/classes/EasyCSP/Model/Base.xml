@@ -1,0 +1,601 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:15">
+<Class name="EasyCSP.Model.Base">
+<Description><![CDATA[
+<p>
+Models a record from a Cache global. Adds common error tracking
+"Glue-ware" that makes a common model type. Model child classes should inherit this
+class in order to access common error reporting, validation, and model event handling. The model is the key component
+in making Cache globals and MV files easy to expose on a web UI. That is, the purpose of the framework
+is rapid web UI development. The underlying business logic the province of an existing back-end.
+</p>
+
+<p>
+One of the most important features of the model class is to enable fast, ready-to-hook up data
+conversion (such as dates and numbers) for display. It leverages ready-made validation for data coming back
+from the UI. Such display conversions and validations are easily extensible by adding more
+type and validation classes and publishing them.
+</p>
+
+<p>
+The model superclass automatically scans the inheriting %Persistent class properties, setting up
+GUI-ready default field labels with data validation and type conversions. Additional validation and conversion
+rules may be set up at any time after the model is instantiated.
+</p>
+
+<p>
+It then represents the current state of a data row by way of "attributes". An attribute differs
+from a standard node or column in that it carries a user-friendly field label, validation rules,
+data conversion strategies, all built-in. Using these attributes, a user data entry form can be
+automatically generated on demand. Adjustments to validation rules or conversions may be made
+at any time in the inheriting model child-class.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Abstract>1</Abstract>
+<CompileAfter>EasyCSP.Core.Component,EasyCSP.Model.attribute</CompileAfter>
+<Super>EasyCSP.Core.Component,EasyCSP.Model.attributeFunctions,EasyCSP.Model.Events,EasyCSP.Model.Metadata</Super>
+<TimeChanged>64155,51359.378398</TimeChanged>
+<TimeCreated>63467,73843.495634</TimeCreated>
+
+<Property name="attributes">
+<Type>EasyCSP.Core.HashArray</Type>
+<Final>1</Final>
+<Transient>1</Transient>
+</Property>
+
+<Property name="columnOrder">
+<Description>
+On instantiation, list all the attributes in storage order by default. The
+controller or view can change this to suit security or display requirements.</Description>
+<Type>EasyCSP.Core.Array</Type>
+<Transient>1</Transient>
+</Property>
+
+<Property name="hasChanged">
+<Type>%Boolean</Type>
+<Final>1</Final>
+<Transient>1</Transient>
+</Property>
+
+<Property name="isMV">
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+<Transient>1</Transient>
+</Property>
+
+<Property name="isNewRecord">
+<Type>%Boolean</Type>
+<InitialExpression>1</InitialExpression>
+<Private>1</Private>
+<Transient>1</Transient>
+</Property>
+
+<Property name="recordId">
+<Type>%String</Type>
+<Transient>1</Transient>
+</Property>
+
+<Method name="recordIdSet">
+<FormalSpec>value</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    if ..hasProperty("ItemId") {
+        set i%ItemId = value
+        set atb = ..getAttribute("itemid")
+        set atb.value = value
+        do ..setAttribute(atb)
+    }
+    
+    set i%recordId = value
+]]></Implementation>
+</Method>
+
+<Property name="metadata">
+<Type>EasyCSP.Model.Metadata</Type>
+<Transient>1</Transient>
+</Property>
+
+<Property name="PK">
+<Type>%String</Type>
+<Transient>1</Transient>
+</Property>
+
+<Property name="scenario">
+<Type>%String</Type>
+<InitialExpression>"new"</InitialExpression>
+<Transient>1</Transient>
+</Property>
+
+<Property name="columnLabels">
+<Type>EasyCSP.Core.HashArray</Type>
+<Transient>1</Transient>
+</Property>
+
+<Property name="columnNames">
+<Type>EasyCSP.Core.HashArray</Type>
+<Transient>1</Transient>
+</Property>
+
+<Property name="finderMap">
+<Type>EasyCSP.Core.HashArray</Type>
+<Transient>1</Transient>
+</Property>
+
+<Property name="modelClass">
+<Type>%String</Type>
+<Transient>1</Transient>
+</Property>
+
+<Property name="readOnly">
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+<Transient>1</Transient>
+</Property>
+
+<Property name="sqlMetadata">
+<Type>%SQL.StatementColumn</Type>
+<Collection>array</Collection>
+<Transient>1</Transient>
+</Property>
+
+<Property name="SqlTableName">
+<Type>%String</Type>
+<Transient>1</Transient>
+</Property>
+
+<Method name="%OnNew">
+<Description><![CDATA[
+<p>This callback method is invoked by the <METHOD>%New</METHOD> method to 
+provide notification that a new instance of an object is being created.</p>
+
+<P>If this method returns an error then the object will not be created.</p>]]></Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    set OK = ..getMetadata()
+    
+    quit:'OK OK
+    
+    // The model attribute properties are now known. Are there any validation rules to be applied?
+    if ..hasMethod("validationRules") {
+        try {
+            set OK = $METHOD($THIS,"validationRules")
+        } catch %EasyCSPException {
+            quit ; $$$ERROR("Exception in validationRules")
+        }
+    }
+    
+    // Last, if there is a user-written post-construct event to perform:
+    if ..hasMethod("afterConstruct") {
+        try {
+            set OK = $METHOD($THIS,"afterConstruct")
+        } catch %EasyCSPException {
+            quit ; $$$ERROR("Exception in validationRules")
+        }
+    }
+    
+    set ..scenario = "new"
+    
+    set ..readOnly = +parameters.get("readOnly")
+    
+    quit $$$OK // allow the model to instantiate so error messages can be retrieved.
+]]></Implementation>
+</Method>
+
+<Method name="afterSave">
+<Description>
+Placeholder for the afterSave event</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeQuery">
+<Description>
+Placeholder for the beforeQuery event</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeSave">
+<Description>
+Placeholder for the beforeSave event</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="delete">
+<Description>
+Delete a record from the table/file</Description>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    try {
+        set hasError = 0
+        
+        if ..isMV {
+            set hasError = '..deleteMV()
+        }
+        
+        set rec = ..%OpenId(..recordId)
+        if $isObject(rec) do ..%DeleteId(..recordId)
+        
+    } catch {
+        do ..addError(..PK, "Unable to delete from disk")
+        set hasError = 1
+    }
+    
+    if 'hasError {
+        set ..scenario = "new"
+        set i%isNewRecord = 1
+    }
+    
+    quit hasError
+]]></Implementation>
+</Method>
+
+<Method name="deleteMV">
+<Description>
+Delete an MV record</Description>
+<Language>mvbasic</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    open @ME->%GetParameter("MVFILENAME") to file else return 0
+    delete file, @ME->recordId on error return 0 then return 1 else return 0
+]]></Implementation>
+</Method>
+
+<Method name="getIsNewRecord">
+<Description>
+Match classic YII "is new record?" function. The ..isNewRecord
+property is private.</Description>
+<Final>1</Final>
+<Implementation><![CDATA[    quit ..isNewRecord
+]]></Implementation>
+</Method>
+
+<Method name="getSQLResultSet">
+<Description>
+For small searches, return a SQL result set</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    do parameters.set("model", ..%ClassName(1))
+    do:parameters.get("select")="" parameters.set("select", "*")
+    set query = ##class(EasyCSP.SQL.Query).%New(parameters)
+    quit query.getRecordset()
+]]></Implementation>
+</Method>
+
+<Method name="getSQLTableName">
+<Description>
+Find the SQL table name without having a class instance.</Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set tableName = ""
+    
+    // The storable attributes have been created. Gather some SQL metadata for handling
+    // queries.
+    set sql = "select SqlSchemaName,SqlTableName from %Dictionary.CompiledClass where ID='"_$classname()_"'"
+    
+    set query = ##class(%SQL.Statement).%New()
+    set qStatus = query.%Prepare(sql)
+    
+    if qStatus '= 1 {
+        d ..SetCondition(701, "Could not prepare SQL statement. Statement was:"_$MVVM_sql)
+        quit 0
+    }
+    
+    set recordSet = query.%Execute()
+    
+    while recordSet.%Next()
+    {
+        set tableName = recordSet.%Get("SqlSchemaName")_"."_recordSet.%Get("SqlTableName")
+        quit
+    }
+    
+    quit tableName
+]]></Implementation>
+</Method>
+
+<Method name="loadModel">
+<Description>
+After a record is opened by %OpenId, you have a copy of the %Persistent
+piece. The code doesn't go through the model %OnNew(). It's necessary to
+load the attributes from the %Persistent record.</Description>
+<Final>1</Final>
+<FormalSpec>record:%Persistent</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    //do:%EasyCSPDebugging %EasyCSPApp.controller.renderedPage.CopyFrom(..debugDump(record))
+    //do:%EasyCSPDebugging %EasyCSPApp.controller.renderedPage.CopyFrom(..debugDump(..attributes))
+    //
+    
+    set finder = ..attributes.Next("")
+    while finder '= ""  {
+        
+        set atb = ..attributes.get(finder)
+        if atb.order < 0 { // if this is a form-model attribute, not a record model attribute.
+            set finder = ..attributes.Next(finder)
+            continue
+        }
+        
+        set newValue = ""
+        
+        set:..hasProperty(atb.name) newValue = $property(record, atb.name) ; attribute-for-attribute
+        
+        if $isobject(newValue) {
+            s newValue = newValue.Serialize()
+        }
+        
+        
+        if +$get(%EasyCSPDebugging) {
+            write "<pre>",!
+            write "Setting attribute ",atb.name," to '",newValue,"'",!
+            write "</pre>",!
+        }
+        
+        
+        set atb.value = newValue
+        do ..attributes.set(finder, atb)
+        
+        if atb.isPK {
+            set ..recordId = atb.value
+        }
+        
+        set:..hasProperty(atb.name) $property($this,atb.name) = newValue
+        
+        if ..isMV {
+            
+            set order = atb.order
+        
+            if atb.isPK = 0 {
+                set mvRecord = $property(,"Record")
+                set $piece(mvRecord, $mvfm, order) = newValue
+                set $property(, "Record") = mvRecord
+                //write:%EasyCSPDebugging "<pre>" _..modelClass _ ": Set MV record attribute ",order," (",atb.name, ") to '", newValue,"'</pre>",!
+            } else {
+                set $property($this,"recordId") = newValue
+                //write:%EasyCSPDebugging "<pre>" _..modelClass _ ": Set MV record attribute ",order," (",atb.name, ") to '", newValue,"'</pre>",!
+            }
+            
+        }
+        
+        set finder = ..attributes.Next(finder)
+        
+    }
+        
+    set i%isNewRecord = 0 // This is not a new record; it came from the database.
+    set i%hasChanged = 0
+    set i%scenario = "old"
+    
+    do:+$get(%EasyCSPDebugging) %EasyCSPApp.controller.renderedPage.CopyFrom(..captureObjDump($this))
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="loadProperties">
+<Description>
+After a setAttributes update the class persistent properties to reflect the new data in the model</Description>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set finder = ..attributes.Next("")
+    while finder '= "" {
+        set atb = ..attributes.get(finder)
+        set propertyName = atb.name
+        set:..hasProperty(propertyName) $PROPERTY($THIS, propertyName) = atb.value
+        set finder = ..attributes.Next(finder)
+    }
+    
+    set i%isNewRecord = 0 // This is not a new record; it came from the database.
+    set ..scenario = "old"
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="nextID">
+<Description>
+Provide an auto-increment number for item-id's in a file.</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+    set unclaimed = 0
+    set mvFileName = $classname()
+    
+    lock ^ECSPNextId(mvFileName)
+    
+    set nextId = +$get(^ECSPNextId(mvFileName)) + 1
+    
+    // Don't overwrite existing records. Keep looking for the next available slot.
+    while 'unclaimed {
+        
+        set obj = $classmethod(mvFileName,"%OpenId",nextId)
+        if '$isobject(obj) {
+            set unclaimed = 1
+            quit
+        }
+        
+        set nextId = nextId + 1
+    }
+    
+    set ^ECSPNextId(mvFileName) = nextId
+    lock -^ECSPNextId(mvFileName)
+    quit nextId
+]]></Implementation>
+</Method>
+
+<Method name="read">
+<Description>
+Given a key, obtain a record from the global then load the model
+attributes and properties from the record.</Description>
+<FormalSpec>id</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set record = $classmethod($classname(), "%OpenId", id)
+    
+    set i%isNewRecord = 1
+    
+    if '$isobject(record) {
+        do ..addError(..PK, "The record identified by key "_id_" is not on file.")
+        quit 0
+    }
+    
+    // Last, if there is a user-written post-construct event to perform:
+    if ..hasMethod("beforeQuery") {
+        try {
+            d $METHOD($THIS,"beforeQuery")
+        } catch %EasyCSPException {
+            d $SYSTEM.OBJ.Dump(%EasyCSPException)
+        }
+    }
+    
+    quit:$get(%EasyCSPException)'="" 0 ; $$$ERROR("Exception in beforeQuery")
+    set ..recordId = id
+    set i%isNewRecord = 0
+    
+    do ..loadModel(record)
+    
+    
+    // Last, if there is a user-written post-construct event to perform:
+    if ..hasMethod("afterQuery") {
+        try {
+            d $METHOD($THIS,"afterQuery")
+        } catch %EasyCSPException {
+            d $SYSTEM.OBJ.Dump(%EasyCSPException)
+        }
+    }
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="save">
+<Description><![CDATA[
+<p>Saves the model as a record in the database. Save() automatically calls <method>validate()</method>
+which in turn will run the before- and after-validate events if they exist. If validation fails at
+any step the save will not be performed and the model will have specific validation error messages
+loaded into the attribute "errors" location. This simplifies error display on an HTML form, allowing
+both a general "fix all these things before resubmitting" div and an individualized, per-field error
+report marking which fields should be fixed. This increases the likelihood of enforced data integrity
+within the database by pointing out specific errors on the web for for the user to correct.</p>
+
+<p>If validation passes on all attributes, <method>save()</method> will search for and run any
+before-save and after-save event handlers if such exist. Note: it is not an error if no before- or
+after-save event handler has been coded. These exist as hooks for the programmer to pre- or post-process
+model attribute data, such as setting default dates or status data.</p>]]></Description>
+<Final>1</Final>
+<FormalSpec>parameters:EasyCSP.Core.Array=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set OK = 1
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    if +$get(%EasyCSPDebugging) {
+        do %EasyCSPApp.controller.renderedPage.CopyFrom(..debugSay("Top of Model.Save()"))
+        do %EasyCSPApp.controller.renderedPage.CopyFrom(..debugDump($this))
+    }
+    
+    set ..scenario = "save" // inform validation that the record is being prepared for a write.
+    
+    
+    set OK = ..validate(parameters) // validate all attributes
+    quit:'OK OK
+    
+    s:..hasMethod("beforeSave") OK = $METHOD(,"beforeSave",parameters)
+    quit:'OK OK
+    
+    if ..isMV {
+    
+        if %EasyCSPDebugging {
+            do ..debugDump($this)
+        } else {
+            if ..getIsNewRecord() = 1 {
+                if ..recordId = "" set ..recordId = ..getAttributeValue(..PK)
+            }
+            do ..setMVRecord()
+            do ..writeMVRecord()
+        }
+    } else {
+        try {
+            set OK = ..%Save()
+        } catch %EasyCSPException {
+            quit
+        }
+    }
+    
+    if $get(%EasyCSPException) '= "" quit 0
+    
+    if OK & ..hasMethod("afterSave") {
+        s OK = $METHOD(,"afterSave", parameters)
+    }
+    
+    if %EasyCSPDebugging {
+        do %EasyCSPApp.controller.renderedPage.CopyFrom(..debugSay("End of Model.Save()"))
+        do %EasyCSPApp.controller.renderedPage.CopyFrom(..debugDump($this))
+    }
+    
+    quit OK
+]]></Implementation>
+</Method>
+
+<Method name="searchBySQL">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    do parameters.set("model", ..%ClassName(1))
+    do:parameters.get("select")="" parameters.set("select", "*")
+    set query = ##class(EasyCSP.SQL.Query).%New(parameters)
+    do query.run()
+    quit query.id
+]]></Implementation>
+</Method>
+
+<Method name="setMVRecord">
+<Description>
+I'll admit I have no idea why this is necessary but
+it seems to make the Cache .%Save() work. It throws
+an error otherwise. I'll dig into the Cache code later.</Description>
+<Language>mvbasic</Language>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    @ID = @ME->recordId
+    @RECORD = @ME->Record
+    return 1
+]]></Implementation>
+</Method>
+
+<Method name="writeMVRecord">
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    open @ME->%GetParameter("MVFILENAME") to file else return 0
+    write @RECORD to file, @ID on error return 0 then return 1 else return 0
+    return 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

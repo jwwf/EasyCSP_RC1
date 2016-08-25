@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:30">
+<Class name="EasyCSP.Validator.Validators.PhoneNumber">
+<Description>
+Strip punctuation and spaces then check for 10 digits.</Description>
+<Language>mvbasic</Language>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64127,32285.249949</TimeChanged>
+<TimeCreated>64109,36632.796346</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    attribute = @ME->init(parameters)
+    if attribute->hasErrors() then return attribute
+    
+    value = attribute->value
+    
+    convert "()-." to "" in value
+    if len(oconv(value, "MCN")) = 10 then
+        attribute->addError("A phone number must have 10 numeric digits. Punctuation is optional and ignored.")
+    end
+    
+    return attribute
+]]></Implementation>
+</Method>
+</Class>
+</Export>

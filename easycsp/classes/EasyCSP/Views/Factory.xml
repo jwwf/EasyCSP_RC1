@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:34">
+<Class name="EasyCSP.Views.Factory">
+<Description><![CDATA[
+<p>
+Pass in the class name of the view to create. This function will first look in the local namespace
+for a "Views.<i>controllerId</i>" package. If the class is not located there then the 
+"EasyCSP.Views.<i>controllerId</i>" package is searched
+next. The last subpackage folder searched is EasyCSP.Views.Default.
+Throw an exception if the class can not be located or can not be instantiated. 
+</p>
+
+<p>The <variable>className</variable> argument is required. If <variable>controllerId</variable> is not
+supplied then controller defaults to the id of the controller making the request. The <variable>data</variable>
+is optional but suggested. Controller actions should at least set the presentation and
+page title to override defaults for form views.
+</p>
+
+<p>
+The naming convention search follows this order:
+<ul>
+<li>For each possible views folder look for the following names:
+    <ol>
+        <li>The class name as supplied. (ex: MyViewName</li>
+        <li>The class name as title case (ex: Myviewname)</li>
+        <li>The class name in all lower case (ex: myviewname)</li>
+        <li>The class name in all upper case (ex: MYVIEWNAME)</li>
+    </ol>
+</li>
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64107,62690.334655</TimeChanged>
+<TimeCreated>63541,80046.507063</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",controllerId:%String="",data:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Views.Base</ReturnType>
+<Implementation><![CDATA[
+    if $get(className)="" {
+        throw ##class(EasyCSP.Core.Exception).%New("EasyCSP.Views.Factory", "VF10", "No class name was supplied.")
+    }
+    
+    set:$get(controllerId)="" controllerId = %EasyCSPApp.controller.id
+    set:$get(data)="" data = ##class(EasyCSP.Core.HashArray).%New()
+    
+    
+    // Title-cased class name for retries
+    set classNameTC = $mvoconv(className, "MCT")
+    set classNameLC = $mvoconv(className, "MCL")
+    set classNameUC = $mvoconv(className, "MCU")
+    
+    //
+    // Local Views.{controllerId}.{className}
+    // 
+    set fqcn = "Views."_controllerId_"."_className ; fully-qualified class name
+    set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    
+    if '$IsObject(def) {
+        
+        set fqcn = "Views."_controllerId_"."_classNameTC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    if '$IsObject(def) {
+        
+        set fqcn = "Views."_controllerId_"."_classNameLC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    if '$IsObject(def) {
+        
+        set fqcn = "Views."_controllerId_"."_classNameUC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    //
+    // Local Views.Default.{className}
+    //
+    
+    if '$IsObject(def) {
+        set fqcn = "Views.Default."_className ; fully-qualified class name
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+        
+    }
+    
+    if '$IsObject(def) {
+        
+        set fqcn = "Views.Default."_classNameTC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    if '$IsObject(def) {
+        
+        set fqcn = "Views.Default."_classNameLC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    if '$IsObject(def) {
+        
+        set fqcn = "Views.Default."_classNameUC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    //
+    // Framework-supplied EasyCSP.Views.{controllerId}.className
+    // 
+    if '$isobject(def) {
+        
+        set fqcn = "EasyCSP.Views."_controllerId_"."_className
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+            
+    if '$isobject(def) { 
+
+        set fqcn = "EasyCSP.Views."_controllerId_"."_classNameTC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+            
+    if '$isobject(def) { 
+
+        set fqcn = "EasyCSP.Views."_controllerId_"."_classNameLC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+            
+    if '$isobject(def) { 
+
+        set fqcn = "EasyCSP.Views."_controllerId_"."_classNameUC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    //
+    // Framework-supplied EasyCSP.Views.Default.{className}
+    // 
+    if '$isobject(def) {
+        
+        set fqcn = "EasyCSP.Views.Default."_className
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+            
+    if '$isobject(def) { 
+
+        set fqcn = "EasyCSP.Views.Default."_classNameTC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+            
+    if '$isobject(def) { 
+
+        set fqcn = "EasyCSP.Views.Default."_classNameLC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+            
+    if '$isobject(def) { 
+
+        set fqcn = "EasyCSP.Views.Default."_classNameUC
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    // Finally, if no view of the requested name can be found anywhere, throw an
+    // exception.
+    if '$IsObject(def) {
+        throw ##class(EasyCSP.Core.Exception).%New("EasyCSP.Views.Factory", "VF20", "No view class named """_className_""" can be located.")
+    }
+    
+    // Exceptions will be bubbled up and handled by the controller
+    set view = $CLASSMETHOD(fqcn, "%New", data)   
+    quit view
+]]></Implementation>
+</Method>
+</Class>
+</Export>

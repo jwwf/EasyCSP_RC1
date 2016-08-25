@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:25">
+<Class name="EasyCSP.SQL.Select">
+<Description><![CDATA[
+Column or array of columns to select from the table. This
+version of a SQL selector requires the actual SQL field names
+in the table, not the attribute finder-names.
+
+TODO: Finish and implement this class.
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>64142,58646.644596</TimeChanged>
+<TimeCreated>64141,34129.073302</TimeCreated>
+
+<Property name="columnLabels">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Property name="columnNames">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Method name="%OnNew">
+<FormalSpec>model="",columnList:%String="*"</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    
+    set ..columnLabels = ##class(EasyCSP.Core.Array).%New()
+    set ..columnNames = ##class(EasyCSP.Core.Array).%New()
+    
+    set finderList = ..listFromString(columnList) ; accept a comma-delimited list
+    
+    set classDef = ##class(%Dictionary.CompiledClass).%OpenId(model)
+    
+    set tableName = classDef.SqlSchemaName _ "." _ classDef.SqlTableName
+    
+    // Next, grab the table sqlMetadata and cubbyhole each column description
+    // under the standard model finder name.
+    set rset = ##class(%SQL.Statement).%New()
+    set sql = "select * from "_tableName
+    
+    // This doesn't run a statement. It just prepares it so this class can farm the metadata.
+    set sc = rset.%Prepare(sql)
+    set colCount = rset.%Metadata.columnCount
+    
+    for idx = 1:1:colCount {
+        set sqlStatementCol = rset.%Metadata.columns.GetAt(idx)
+        
+        set finder = sqlStatementCol.colName
+        
+        if finder = "" continue
+        
+        // Ignore transient properties and expressions.
+        if 'sqlStatementCol.isExpression {
+            do ..columnLabels.append(##class(EasyCSP.Conversions.ColumnToLabel).run(sqlStatementCol.label))
+            do ..columnNames.append(finder)
+        }
+    }
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="render">
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ##class(EasyCSP.Core.Array).%New()
+    
+    set idx = ..columnNames.Next()
+    while idx '= "" {
+        do rtn.append(..columnNames.get(idx) _ " AS """ _ ..columnLabels.get(idx) _ """")
+        set idx = ..columnNames.Next(idx)
+    }
+    
+    return rtn.join("," _ ..crlf)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

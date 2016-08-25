@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:16">
+<Class name="EasyCSP.Model.MVBase">
+<Description><![CDATA[
+<p>MV file abstraction layers.  This provides careful locking, data integrity options, and
+a Read(L)(N)(U) syntax that will be comfortable for MV, VB, C#, and PHP programmers
+alike.  Use this class to extend classes that describe physical multivalue files.  This helps
+keep your physical file classes clean and neat.  It also provides a single point of maintenance
+for all read and write operations.  It provides complete debugging and tracing, so if you're
+trying to trace a data problem, you can figure out exactly which programs are reading or
+writing at any particular moment.</p>
+
+<p>This abstraction contains analogues for the Pick READ, READL, READU, WRITE, WRITEU, and
+RELEASE commands.  The added value this abstraction provides when it extends your file class
+is the careful control of file handles, file properties, and record properties.  You also get
+a ReadN (read with no-wait) function that will return immediately (setting error thread globals)
+if another process has a lock on the desired record.  This benefits PHANTOM processes that must
+service communications calls that cannot wait for locks due to protocol time restraints.</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Abstract>1</Abstract>
+<CompileAfter>EasyCSP.Model.Base</CompileAfter>
+<Language>mvbasic</Language>
+<Super>EasyCSP.Model.Base,%MV.Adaptor</Super>
+<TimeChanged>64152,29978.370546</TimeChanged>
+<TimeCreated>63535,38294.153422</TimeCreated>
+<LegacyInstanceContext>1</LegacyInstanceContext>
+
+<Property name="Record">
+<Description>
+A copy of the current record as a dynamic array</Description>
+<Type>%String</Type>
+<Transient>1</Transient>
+<Parameter name="MAXLEN" value="3641144"/>
+</Property>
+
+<Method name="ItemIdSet">
+<FormalSpec>value</FormalSpec>
+<Language>cache</Language>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set i%ItemId = value
+    do ..setAttributeValue("ItemId", value)
+    set i%recordId = value
+]]></Implementation>
+</Method>
+
+<Method name="%OnNew">
+<Description>
+Include %MV.Adaptor as a super</Description>
+<Final>1</Final>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    
+    Return ##super() ; * MV setup is done. Now finish the standard model.
+]]></Implementation>
+</Method>
+
+<Method name="Write">
+<Description>
+MV alias for save()</Description>
+<FormalSpec>validate:%Boolean=1</FormalSpec>
+<Language>cache</Language>
+<Implementation><![CDATA[
+    set:+$get(validate)'=0 validate = 1
+    quit ..save(validate)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

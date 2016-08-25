@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:32">
+<Class name="EasyCSP.Views.Default.ArrayView">
+<Description><![CDATA[
+Inspect an entire record. This is the default system view. To override this
+view, create a class in your local Views.<i>controllerName.</i> package folder.
+Your class must have the same signature and an entry-point method named run().
+
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64146,35979.72908</TimeChanged>
+<TimeCreated>64090,36037.285103</TimeCreated>
+
+<Parameter name="evenRowClass">
+<Type>%String</Type>
+<Default>evenTableRow</Default>
+</Parameter>
+
+<Parameter name="oddRowClass">
+<Type>%String</Type>
+<Default>oddTableRow</Default>
+</Parameter>
+
+<Method name="run">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    
+    if '..data.isset("array") {
+        throw ##class(EasyCSP.Core.Exception).%New($classname(%EasyCSP.controller.layout.view), 404,"""array"" should be a valid instance of an EasyCSP.Core.Array or EasyCSP.Core.HashArray.")
+    }
+    
+    set viewArray = ..data.get("array")
+    
+    if '..instanceOf(viewArray, "Core.Array") & '..instanceOf(viewArray, "Core.HashArray") {
+        throw ##class(EasyCSP.Core.Exception).%New($classname(%EasyCSP.controller.layout.view), 404,"""array"" should be a valid instance of an EasyCSP.Core.Array or EasyCSP.Core.HashArray.")
+    }
+    
+    set ..pageTitle = ..data.get("pageTitle")
+    set:..pageTitle="" ..pageTitle = "View a Nested Record"
+    
+    do ..addStreamContent(##class(EasyCSP.Rendering.array).toTable(viewArray))
+    
+    set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    do htmlOptions.set("style","float: right; width: 30%;")
+    do ..openTag("div", htmlOptions)
+    set controllerName = $mvoconv(%EasyCSPApp.controller.id, "MCT")
+    do ..addContent(..routeLink("Cancel and return to the " _ controllerName _ " index", %EasyCSPApp.controller.id _ "/index"))
+    do ..closeTag("div")
+    
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

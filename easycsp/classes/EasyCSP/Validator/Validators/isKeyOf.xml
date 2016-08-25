@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:31">
+<Class name="EasyCSP.Validator.Validators.isKeyOf">
+<Description>
+Checks to see if the attribute value is an existing key in another file.</Description>
+<Super>EasyCSP.Validator.Base</Super>
+<TimeChanged>64148,74571.851227</TimeChanged>
+<TimeCreated>64147,74495.780774</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>EasyCSP.Model.attribute</ReturnType>
+<Implementation><![CDATA[
+    
+    set attribute = ..init(parameters)
+    quit:attribute.value="" attribute
+    quit:attribute.keyOf="" attribute
+    
+    set model = ##class(EasyCSP.Core.Component).objectFactory(attribute.keyOf, "model")
+    
+    // Outside the model in screens, multivalued fields are represented with @fm's. In
+    // screens, those will be cr, lf, or crlf. Controllers expect EOLs from web pages
+    // and will convert eol-delimited strings to @fm-delimited strings. The attribute
+    // base functions expect @fm's. Those will be serialized back to an internal list.
+    // When the list is retrieved from the %Persistent, it gets deserialized back to
+    // an @vm-delimited string.
+    set values = ##class(EasyCSP.Core.Array).%New()
+    do values.split(attribute.value, $mvvm)
+    
+    set idx = values.Next()
+    while idx '= "" {
+        set value = values.get(idx)
+        do model.read(value)
+        if model.getIsNewRecord() = 1 {
+            do attribute.addError(..%ClassName()_ ": " _ value _ " does not exist in " _ attribute.keyOf)
+        }
+        set idx = values.Next(idx)
+    }
+    
+    quit attribute
+]]></Implementation>
+</Method>
+</Class>
+</Export>

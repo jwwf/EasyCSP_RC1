@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:56">
+<Class name="EasyCSP.Configuration.Installer">
+<Description><![CDATA[
+EasyCSP Installer.
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<IncludeCode>%occInclude</IncludeCode>
+<TimeChanged>64152,59977.636944</TimeChanged>
+<TimeCreated>64150,27053.846432</TimeCreated>
+
+<XData name="EasyCSP">
+<Description>
+Application Definition</Description>
+<XMLNamespace>INSTALLER</XMLNamespace>
+<Data><![CDATA[
+<Manifest>
+    <If Condition='$L("${NAMESPACE}")=0'>
+        <!-- Report an error if the namespace wasn't specified -->
+        <Error Status="$$$NamespaceDoesNotExist">
+            <Arg Value="${NAMESPACE}"/>
+        </Error>
+    </If>
+
+    <Namespace Name="EasyCSP">
+        <!-- Invoke a helper method on this installer class -->
+        <Invoke Class="EasyCSP.Configuration.Installer" Method="Message" CheckStatus="0"/>
+    </Namespace>
+
+    <!-- Do some setup -->
+    <Var Name="EasyCSPDIR" Value="${EasyCSPDIR}/EasyCSP"/>
+    <Var Name="DBRESOURCE" Value="%DB_${NAMESPACE}"/>
+    <Var Name="EasyCSPRESOURCE" Value="%DB_EasyCSP"/>
+    <Var Name="PRODUCTION" Value="EasyCSP"/>
+    <Var Name="TOPDIR" Value="${MGRDIR}" />
+
+    <!-- Create the namespace, yes it's Ensemble enabled for EasyCSP -->
+    <Namespace Name="${NAMESPACE}"
+          Create="yes"
+          Code="${NAMESPACE}"
+          Data="${NAMESPACE}"
+          Ensemble="1"
+          EnsemblePortalPrefix="EasyCSP"
+          EnsemblePortalSuffix="ensemble"
+          EnsemblePortalGrant="${DBRESOURCE}"
+          >
+
+        <Configuration>
+
+            <!-- Create a "data" database -->
+            <Database Name="${NAMESPACE}"
+         Dir="${TOPDIR}/${NAMESPACE}"
+         Create="yes"
+         Resource="${DBRESOURCE}"
+         PublicPermissions=""/>
+
+            <!-- Add the existing EasyCSP database as the code database for this namespace -->
+            <Database Name="EasyCSP"
+         Dir="${EasyCSPDIR}/db"
+         Create="no"
+         Resource="${EasyCSPRESOURCE}"
+         PublicPermissions=""/>
+
+            <!-- EasyCSP mappings back to the EasyCSP DB.-->
+            <GlobalMapping Global="EasyCSPData.*"     From="EasyCSP"/>
+            <GlobalMapping Global="cspRule"         From="EasyCSP"/>
+            <ClassMapping Package="EasyCSP"           From="EasyCSP"/>
+            <RoutineMapping Routines="EasyCSP" Type="INC" From="EasyCSP"/>
+        </Configuration>
+
+        <!-- Check for an upgrade vs install -->
+        <Invoke Class="EasyCSP.Installer" Method="IsUpgrade" Return="ISUPGRADE"/>
+
+        <!-- EasyCSP setup, load some data in -->
+        <Import File="${EasyCSPDIR}/data/Defaults.gof"/>
+
+        <!-- Load patch classes (if they exist) -->
+        <If Condition='#{##class(%File).DirectoryExists("${EasyCSPDIR}/patch/")}'>
+            <!-- Load a directory full of files, ignore error 5202 ... -->
+            <Import File="${EasyCSPDIR}/patch/" IgnoreErrors="5202" Flags="ck"/>
+        </If>
+
+        <!-- Configure EasyCSP -->
+        <Invoke Class="EasyCSP.Installer" Method="SetupDefaults" CheckStatus="1">
+            <Arg Value="${NAMESPACE}"/>
+            <Arg Value="${ISUPGRADE}"/>
+            <!-- True if upgrading -->
+        </Invoke>
+
+        <If Condition="'${ISUPGRADE}">
+            <!-- Compile the production for a new install -->
+            <Compile Class="${PRODUCTION}" Flags="ck"/>
+
+            <!-- Configure the production -->
+            <Production Name="${PRODUCTION}">
+                <Setting Item="FOO"
+        Target="Host"
+        Setting="Upgraded"
+        Value="${ISUPGRADE}"/>
+                <Setting Item="FOO"
+        Target="Host"
+        Setting="Namespace"
+         Value="${NAMESPACE}"/>
+            </Production>
+        </If>
+
+        <!-- System settings changes required for EasyCSP -->
+        <SystemSetting Name="Config.Miscellaneous.EnableLongStrings" Value="1"/>
+
+        <!-- Create a CSP application for the namespace -->
+        <Var Name="URL" Value='/csp/EasyCSP/#{$ZCVT("${NAMESPACE}","L")}'/>
+        <Var Name="DIR" Dir='${CSPDIR}EasyCSP/#{$ZCVT("${NAMESPACE}","L")}'/>
+
+        <CSPApplication Url="${URL}"
+               Directory="${DIR}"
+               Resource=""
+               Grant="${DBRESOURCE}"
+               Description="EasyCSP CSP Interface"
+               Recurse="1"
+               CookiePath="/csp/EasyCSPp"
+               AuthenticationMethods="32"
+     />
+
+    </Namespace>
+</Manifest>
+]]></Data>
+</XData>
+
+<Method name="setup">
+<Description>
+This is a method generator whose code is generated by XGL.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<CodeMode>objectgenerator</CodeMode>
+<FormalSpec><![CDATA[&pVars,pLogLevel:%Integer,pInstaller:%Installer.Installer,pLogger:%Installer.AbstractLogger]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    #; Let our XGL document generate code for this method. 
+    Quit ##class(%Installer.Manifest).%Generate(%compiledclass, %code, "EasyCSP")
+]]></Implementation>
+</Method>
+
+<Method name="Message">
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    WRITE $TR($J("",60)," ","="),!
+    WRITE $ZV,!
+    WRITE $TR($J("",60)," ","="),!
+]]></Implementation>
+</Method>
+
+<Method name="SetupDefaults">
+<Description>
+Setup defaults for this EasyCSP system</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pNamespace:%String=$ZU(5),pUpgrading:%Boolean</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    #dim tSC As %Status
+    Set tSC=$$$OK,$ZT="Trap"
+    Do {
+    
+        // Do whatever here ...
+        
+    } While (0)
+Exit
+    Quit tSC
+Trap
+    Set $ZT="",tSC=$$$ERROR($$$CacheError,$ZE)
+    Goto Exit
+]]></Implementation>
+</Method>
+
+<Method name="IsUpgrade">
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec>pNamespace:%String=$ZU(5)</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[$RANDOM(2)
+]]></Implementation>
+</Method>
+
+<Method name="RunInstall">
+<Description>
+Invoke the installer passing in some variables</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>topDirectory:%String="",Upgrade:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    #dim tVars
+    #dim tStatus As %Status
+    #dim tLogLevel As %Integer = 1
+    
+    // Initialize any variables we want to pass to the installer
+    Set tVars("NAMESPACE") = "EasyCSP"
+    Set:$get(topDirectory)'="" tVars("TOPDIR") = topDirectory
+    
+    // Invoke the installer
+    Set tStatus = ..setup(.tVars,tLogLevel)
+    
+    Do:$$$ISERR(tStatus) $system.OBJ.DisplayError(tStatus)
+    
+    Quit tStatus
+]]></Implementation>
+</Method>
+
+<Method name="RunInstallWithLog">
+<Description>
+Invoke the installer passing in some variables</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pLogfile:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    #dim tVars
+    #dim tStatus As %Status
+    #dim tLogLevel As %Integer = 1
+    
+    // Initialize any variables we want to pass to the installer
+    Set tVars("NAMESPACE") = "EasyCSP"
+
+    // Construct a file logger
+    #dim tLogger As %Installer.FileLogger = ##class(%Installer.FileLogger).%New(1,pLogfile)
+    
+    // Invoke the installer
+    Set tStatus = ..setup(.tVars,tLogLevel,,tLogger)
+    
+    Do:$$$ISERR(tStatus) $system.OBJ.DisplayError(tStatus)
+    
+    Quit tStatus
+]]></Implementation>
+</Method>
+</Class>
+</Export>

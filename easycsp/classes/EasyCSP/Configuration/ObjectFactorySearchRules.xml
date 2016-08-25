@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:57">
+<Class name="EasyCSP.Configuration.ObjectFactorySearchRules">
+<Description>
+This class is only a convenient way to describe object search rules.</Description>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64155,60852.553655</TimeChanged>
+<TimeCreated>64137,67488.419637</TimeCreated>
+
+<Property name="rules">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Method name="%OnNew">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set ..rules = ##class(EasyCSP.Core.HashArray).%New()
+    
+    /* ******************************************************* */
+    /*           Composite models and user applications        */
+    /* ******************************************************* */
+    
+    set appSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do appSearchRules.append("Activities")
+    do appSearchRules.append("EasyCSP.Activities.@") ; "@" denotes that the object factory should substitute the currently-instantiated controller's id
+    do appSearchRules.append("EasyCSP.Activities.Default")
+    
+    do ..rules.set("activity", appSearchRules)
+    
+    
+    /* ******************************************************* */
+    /*           Process flow controllers                      */
+    /* ******************************************************* */
+    
+    set controllerSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do controllerSearchRules.append("Controllers")
+    do controllerSearchRules.append("Controller.Controllers")
+    do controllerSearchRules.append("EasyCSP.Controller.Controllers")
+    
+    do ..rules.set("controller", controllerSearchRules)
+    
+    
+    /* ******************************************************* */
+    /*           Data ouput converters                         */
+    /* ******************************************************* */
+    
+    set converterSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do converterSearchRules.append("Converters")
+    do converterSearchRules.append("Converter.Converters")
+    do converterSearchRules.append("EasyCSP.Converter.Converters")
+    
+    do ..rules.set("converter", converterSearchRules)
+    
+    /* ******************************************************* */
+    /*                  Page Layouts                           */
+    /* ******************************************************* */
+    
+    set layoutSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do layoutSearchRules.append("Layouts")
+    do layoutSearchRules.append("Layout.Layouts")
+    do layoutSearchRules.append("EasyCSP.Layouts")
+    do layoutSearchRules.append("EasyCSP.Layout.Layouts")
+    
+    do ..rules.set("layout", layoutSearchRules)
+    
+    /* ******************************************************* */
+    /*                 Data Models                             */
+    /* ******************************************************* */
+    
+    set modelSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do modelSearchRules.append("Models")
+    do modelSearchRules.append("Model.Models")
+    do modelSearchRules.append("EasyCSP.Model.Models")
+    
+    do ..rules.set("model", modelSearchRules)
+    
+    /* ******************************************************* */
+    /*                 Data Validators                         */
+    /* ******************************************************* */
+    
+    set validatorSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do validatorSearchRules.append("Validators")
+    do validatorSearchRules.append("Validator.Validators")
+    do validatorSearchRules.append("EasyCSP.Validator.Validators")
+    
+    do ..rules.set("validator", validatorSearchRules)
+    
+    /* ******************************************************* */
+    /*                   Web Page Views                        */
+    /* ******************************************************* */
+    
+    set viewsSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do viewsSearchRules.append("Views.@")
+    do viewsSearchRules.append("Views.Default")
+    do viewsSearchRules.append("EasyCSP.Views.@")
+    do viewsSearchRules.append("EasyCSP.Views.Site")
+    do viewsSearchRules.append("EasyCSP.Views.Default")
+    
+    do ..rules.set("view", viewsSearchRules)
+    
+    /* ******************************************************* */
+    /*                   Web Page Widgets                        */
+    /* ******************************************************* */
+    
+    set widgetSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do widgetSearchRules.append("Widgets")
+    do widgetSearchRules.append("Web.Widgets")
+    do widgetSearchRules.append("EasyCSP.Web.Widget")
+    
+    do ..rules.set("widget", widgetSearchRules)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

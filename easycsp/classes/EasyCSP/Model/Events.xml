@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:16">
+<Class name="EasyCSP.Model.Events">
+<Description>
+This is a list of model events that extent model classes may override.
+More events may be added to the model base classes as need arises. 
+As with any framework object, this can be cloned, extended, and custom
+events can be fired and handled by developer code.</Description>
+<Abstract>1</Abstract>
+<TimeChanged>64142,61532.415469</TimeChanged>
+<TimeCreated>64118,50891.535193</TimeCreated>
+
+<Method name="afterConstruct">
+<Description>
+The afterConstruct event is fired when a .%New() instance of a model is
+created. Since .%New() is a final method and can not be overridden, this
+event gives the developer a chance to add customizations or special
+processing when a model is created. Parameters may be passed in via
+framework parameter-passing mechanism. The custom afterConstruct()
+method MUST end with a %System.Status (or TRUE or 1) if it succeeds.
+If an error must be reported, then use a %System.Error object. The
+error will then produce the appropriate error page instead of killing
+the framework thread.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="afterSave">
+<Description>
+This is a skeleton method that may be overridden by the programmer to enable
+processing of the sfter-save event. This is fired automatically by the 
+model .Save() function. It is not necessary to include this event handler
+in your child-class.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    q 1
+]]></Implementation>
+</Method>
+
+<Method name="afterValidate">
+<Description>
+This is fired automatically by the model .Validate() function. It is not 
+necessary to include this event handler in your child-class.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[    q $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="beforeQuery">
+<Description>
+This is fired automatically by any model search function before a query
+is executed. It is not necessary to include this event handler in your child-class.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[   quit 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeSave">
+<Description>
+This is fired automatically by the model .Save() function immediately before
+a record is saved. It is not necessary to include this event handler in your 
+child-class.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    q 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeValidate">
+<Description>
+This is a skeleton method that the child model class may override.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    q $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="search">
+<Description>
+Stub for model searches. This can and should be overridden by individual model classes.
+Models should filter which attributes attributes are allowed to be used for searching.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    quit 0
+]]></Implementation>
+</Method>
+
+<Method name="validationRules">
+<Description>
+Stub for validationRules. Override this in the extent class to add
+validation rules.</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[    quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:00">
+<Class name="EasyCSP.Controller.Controllers.Users">
+<Description><![CDATA[
+Starting set of actions. This is the page controller called if the route is empty 
+(meaning the top of the site). Login and redirection after logout are also handled here.
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Controller.Base</Super>
+<TimeChanged>64152,52988.200072</TimeChanged>
+<TimeCreated>63460,66127.990758</TimeCreated>
+
+<Method name="accessRules">
+<Description>
+The afterConstruct event will be run by the application automatically immediately
+after the desired controller has been instantiated. Minimally, the access rules for
+each action should be set up. That is, each user-facing view controller must set 
+access rules for each action the controller will perform.
+
+The accessRules method, if it exists, will be called automatically by the controller
+base class to add access rules to the controller's environment. Specify the actions
+as a comma-separated string of simple action names.</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // allow any user access to help screens, the forgot password screen, the reset password screen,
+    // the error display page, and the signon dialogue.
+    do ..addAccessRule("indexTable,index,create,update,view", "@", "administrators")
+    do ..addAccessRule("delete,chgpass", "@", "administrators")
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+                         Actions
+*/
+]]></Content>
+</UDLText>
+
+<Method name="actionChgpass">
+<Description>
+Change a user's password.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set app = ##class(EasyCSP.Core.Component).objectFactory("UserMaintenance", "activity", parameters).%New()
+    do parameters.set("model", app)
+    
+    // If the operator is not a superuser, only allow users to change their own passwords.
+    if %EasyCSPApp.controller.isSuperUser {
+        set id = parameters.get("id")
+        set:id="" id = %EasyCSPApp.getRequestData("id")
+    } else {
+        set:id="" id = %EasyCSPApp.getSession("uid")
+    }
+    
+    do parameters.set("id", id)
+    
+    //do app.findAllByPK(id)
+    
+    set success = app.chgPass(parameters)
+    
+    if %EasyCSPApp.cgiData.get("REQUEST_METHOD") = "POST" {
+        quit:success ..actionIndex(parameters)
+    }
+    
+    do parameters.set("columnOrder", app.columnOrder)
+    do parameters.set("id", id)
+    do parameters.set("model", app)
+    do parameters.set("models", app.models)
+    do parameters.set("pageTitle", "Change Password for User "_id)
+    do parameters.set("presentation", "Change")
+    
+    quit ..render("Form", parameters)
+]]></Implementation>
+</Method>
+
+<Method name="actionCreate">
+<Description>
+Add a new user to the system</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    do ..toggleDebug(0)
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    set model = ##class(EasyCSP.Core.Component).objectFactory("UserMaintenance", "model", 1, parameters).%New()
+    do parameters.set("model", model)
+    
+    do:%EasyCSPDebugging=1 %EasyCSPApp.controller.renderedPage.CopyFrom(..debugDump(model))
+    
+    
+    // Attempt to complete the requested new user registration.
+    //if model.register(parameters) quit ..render("index")
+    
+    do parameters.set("presentation", "create")
+    
+    quit ..render("Form", parameters)
+]]></Implementation>
+</Method>
+
+<Method name="actionDelete">
+<Description>
+This action is taken when an admin clicks on the secondary dialog
+to deactivate a user. Users in the framework user database are not
+in fact deleted; they are set to inactive.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set id = %EasyCSPApp.getRequestData("id")
+    set queryId = %EasyCSPApp.getRequestData("queryId")
+    
+    set parms = ##class(EasyCSP.Core.HashArray).%New()
+    do parms.set("queryId", queryId)
+    
+    set myself = %EasyCSPApp.users ; my own user record
+    set myShadow = %EasyCSPApp.userShadow ; my own shadow record
+    
+    // If the poster isn't logged in then they have no rights.
+    if $get(myself)'["Users" {
+        quit ..render("site/login")
+    }
+    
+    if id = "" {
+        w "<pre>No id</pre>",!
+        do myself.addError("username", "No record id to delete.")
+        do parms.set("model", myself)
+        quit ..render("index")
+    }
+    
+    if (id = myself.getAttributeValue("username")) {
+        do myself.addError("username", "You can not deactivate your own record through this process.")
+        do parms.set("model", myself)
+        quit ..render("index", parms)
+    }
+    
+    set deleteModel = myself.findByPk(id)
+    if '..instanceOf(deleteModel, "Users") {
+        do myself.addError("username", "ID not found.")
+        do parms.set("model", myself)
+        quit ..render("index", parms)
+    }
+    
+    set model = ##class(EasyCSP.Core.Component).objectFactory("Users", "model", 1, parameters)
+    
+    do parms.set("model", myself)
+    quit ..render("users/index", parms)
+]]></Implementation>
+</Method>
+
+<Method name="actionIndex">
+<Description>
+Display the user table index page</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set model = ##class(EasyCSP.Core.Component).objectFactory("Users", "model", 1, parameters)
+    if '..instanceOf( model, "Users") {
+        throw ##class(EasyCSP.Core.Exception).%New("Settings",404,"","Can not obtain an instance of model Users")
+        quit 0
+    }
+    
+    set queryId = %EasyCSPApp.getRequestData("queryId")
+    
+    do parameters.set("queryId", queryId)
+    do parameters.set("model", model)
+    
+    set columnOrder = ##class(EasyCSP.Core.Array).%New()
+    do columnOrder.split("username,firstname,surname,emailaddress, groupid")
+    do parameters.set("columnOrder", columnOrder)
+    
+    if queryId = "" {
+        set queryId = $classmethod(model.%ClassName(1), "search", parameters)
+        do parameters.set("queryId", queryId)
+    }
+    
+    set buttons = ##class(EasyCSP.Web.Widget.ButtonColumn).%New()
+    set buttonOptions = buttons.defaultButtons()
+    set chgpas = buttons.defineButton("chgpass", "Change password", "user.png")
+    do buttonOptions.append(chgpas)
+    set buttonSave = ##class(EasyCSP.Rendering.json).toString(##class(EasyCSP.Rendering.json).toJSON("buttons", buttonOptions))
+    set ^queryOut(queryId, "buttons") = buttonSave
+    
+    do parameters.set(%EasyCSPApp.getRequestData("pageNumber"))
+    do parameters.set(%EasyCSPApp.getRequestData("pageSize"))
+    
+    quit ..render("QueryResult", parameters)
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionRegister">
+<Description><![CDATA[
+<p>
+The only legal way to get to this action is the request_method must be "POST". The
+jQuery script in the page changes the route to site/register if the user clicks "I am
+a new user" and fills in the form to register.
+</p>]]></Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set ..layoutName = "Login" ; use the same paneled page as error
+    set parms = ##class(EasyCSP.Core.ParameterList).%New()
+    set model = ""
+    
+    if %EasyCSPApp.cgiData.get("REQUEST_METHOD") '= "POST" {
+    }
+    
+    set model = ##class(EasyCSP.Core.Component).objectFactory("LoginForm", "model", 1, parameters)
+    
+    // load the model with the form data
+    do model.loadFromArray(%EasyCSPApp.requestData)
+    do parms.set("model", model)
+    
+    if model.hasErrors() {
+        quit ..render("Login",parms)
+    }
+    
+    // This action is for a new registration only. If someone tries to use an
+    // email address or username that has already been taken, reject the registration
+    // and redisplay the form for correction.
+    set users = ##class(EasyCSP.Models.Users).findByIdentifier(model.getAttributeValue("users_username"))
+    do:$get(users)="" ##class(EasyCSP.Models.Users).findByIdentifier(model.getAttributeValue("users_emailaddresss"))
+    
+    if $get(users)[".Users" {
+        do model.addError("user_username","This user name or email address is already in use.")
+        set OK = ..render("create", parms)
+        quit 1
+    }
+    
+    set OK = model.register()
+    if 'OK {
+        set destination = "Login"
+    } else {
+        set destination = "Activate"
+    }
+    
+    do parms.set("model", model)
+    
+    set OK = ..render(destination, parms)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionUpdate">
+<Description>
+Update a user in the system. Since user information is split across
+two MV files: Users and Shadow. Using the Forms.UserMaintenance
+form super-model, these two models are combined and accessible to
+the form as the appearance of a single record model.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set app = %EasyCSPApp.objectFactory("UserMaintenance", "activity", parameters)
+    do parameters.set("model", app)
+    
+    set id = parameters.get("id")
+    set:id="" id = %EasyCSPApp.requestData.get("id")
+    do:parameters.get("id")="" parameters.set("id", id)
+    
+    do app.findAllByPK(id)
+    
+    set success = app.update(parameters)
+        
+    if (%EasyCSPApp.cgiData.get("REQUEST_METHOD") = "POST") & success {
+        quit:success ..actionIndex(parameters)
+    }
+    
+    // use a double-pane select for groups.
+    do app.setTrait("users_groupId", "multiselect", 1)
+    
+    do parameters.set("columnOrder", app.columnOrder)
+    do parameters.set("id", id)
+    do parameters.set("model", app)
+    do parameters.set("models", app.models)
+    do parameters.set("pageTitle", "Update User "_id)
+    do parameters.set("presentation", "update")
+    
+    quit ..render("Form", parameters)
+]]></Implementation>
+</Method>
+
+<Method name="actionView">
+<Description>
+Drill into a user record</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set model = ##class(EasyCSP.Core.Component).objectFactory("users", "model")
+    
+    // Which user record is to be viewed?
+    set id = parameters.get("id")
+    set:id="" id = %EasyCSPApp.getRequestData("id")
+    
+    // Retrieve that one
+    do model.read(id)
+    do model.beforeQuery()
+    
+    // Pass data to a view through a Framework parameter structure.
+    do parameters.set("model", model)
+    
+    // ... and render the view in its layout
+    quit ..render("RecordView", parameters)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

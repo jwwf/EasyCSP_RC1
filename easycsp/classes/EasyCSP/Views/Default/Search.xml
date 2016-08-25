@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:34">
+<Class name="EasyCSP.Views.Default.Search">
+<Description><![CDATA[
+<p>
+Default search view. Clone and modify, place in the local "Views.Site" package. Do
+not modify this as changes will be overwritten on package upgrade. If a create/update form
+does not exist in the View.{controller.id} subpackage then the factory will select the
+default.
+</p>
+
+<p>
+To create your own custom input form, clone this class into your own Views folder and
+modify it to suit. Examples of things you might want to change would be the order in
+which controls are placed on the page, or to add display traits to one more more
+attributes (setting read-only or modifying value-lists, etc), and so forth. All of
+the presentation can be altered on the fly to suit custom business rules or exceptions.
+</p>
+
+<p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64106,52688.673814</TimeChanged>
+<TimeCreated>63541,31504.474773</TimeCreated>
+
+<Method name="run">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    if '..data.isset("model") {
+        throw ##class(EasyCSP.Core.Exception).%New("EasyCSP.Views.Settings.Form", 404,"Please supply a data model for the login form.")
+        quit 0
+    }
+    
+    set model = ..data.get("model")
+    
+    // Get or guess the presentation. If the controller isn't set up
+    // correctly, an exception will be thrown. If the presentation can
+    // be retrieved or guessed then ..data.get("presentation") will
+    // have the forwarding action for the form.
+    do ..formPresentation()
+    
+    // Use the default page title. Presentations supported are "create" and "update"
+    do ..formPageTitle() 
+    
+    /* ****************************************** Begin Form ************************************* */
+    
+    set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    do htmlOptions.set("id", "mobile-form")
+    do htmlOptions.set("enableAjaxValidation", 0)
+    do htmlOptions.set("enctype", "multipart/form-data")
+    do ..beginForm("post", htmlOptions)
+    
+    // the div inside the clear panel in the page
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("class", "container")
+    do htmlOptions.set("style", "float: left; width: 90%")
+    do ..openTag("div",htmlOptions)
+    
+    
+    /* **************** Start the form elements. Surround the visible elements with a fieldset. *** */
+    do htmlOptions.set("style", "width: 90%;margin:0 15px;")
+    do ..openTag("fieldset",htmlOptions)
+    
+    
+    do ..formMessageAreas(model) // divs for script and model error messages
+            
+    // This form relies on CSS for formatting. These optional parameter lists are being created
+    // here for demonstration. 
+    set outerEnclosureOptions = ##class(EasyCSP.Core.HashArray).%New()  
+    set labelContainerOptions = ##class(EasyCSP.Core.HashArray).%New()  
+    set labelOptions = ##class(EasyCSP.Core.HashArray).%New()
+    set inputOptions = ##class(EasyCSP.Core.HashArray).%New()
+    
+    do ..formControlGroups(model, "") // put control groups on the page
+    
+    /* **************************** end the inner container div ****************************** */
+    do ..closeTag("div")
+    
+    // Make a div just for the submit and cancel buttons
+    do ..formSubmitCancel()
+    
+    /* ***************************** end the form ******************************************** */
+    do ..endForm()
+        
+    do ..closeTag("fieldset")
+    
+    do ..link("Return to the user index","users/index")
+    
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

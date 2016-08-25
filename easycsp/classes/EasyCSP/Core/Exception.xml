@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:14">
+<Class name="EasyCSP.Core.Exception">
+<Description><![CDATA[
+<p>Catches and normalizes exception data.  This helps prevents phantoms from dying
+and to log pertinent information so programmers can go directly to offending code
+to fix problems immediately.  It partly depends on the MVBLogger class.  If that class
+hasn't been instantiated, it will create the object for use here.</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%Exception.AbstractException</Super>
+<TimeChanged>64141,37143.128985</TimeChanged>
+<TimeCreated>63352,46815.298885</TimeCreated>
+
+<Property name="ExceptionCode">
+<Description>
+MVB-Specific error code associated with this exception</Description>
+<Type>%Integer</Type>
+<Final>1</Final>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="Description">
+<Description>
+MVB-specific error description associated with this exception</Description>
+<Type>%String</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="ExceptionName">
+<Description>
+MVB-specific error name associated with this exception</Description>
+<Type>%String</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="ProgramData">
+<Description>
+MVB-specific program error data</Description>
+<Type>%String</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="ProgramLocation">
+<Description>
+Program location</Description>
+<Type>%String</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="Traceback">
+<Description>
+Traceback</Description>
+<Type>EasyCSP.Core.Array</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="HasInnerException">
+<Description>
+Has an inner exception will be @true if this is being rethrown from an underlying exception</Description>
+<Type>%Boolean</Type>
+<Final>1</Final>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="InnerExceptionCode">
+<Description>
+Inner Exception Code - available only if this exception was rethrown because an underlying exception was caught</Description>
+<Type>%String</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="InnerExceptionLocation">
+<Description>
+Inner Exception Location - available only if this exception was rethrown because an underlying exception was caught</Description>
+<Type>%String</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="InnerExceptionName">
+<Description>
+Inner Exception Name - available only if this exception was rethrown because an underlying exception was caught</Description>
+<Type>%String</Type>
+<Final>1</Final>
+</Property>
+
+<Property name="InnerExceptionProgramData">
+<Description>
+Inner Exception Program Data - available only if this exception was rethrown because an underlying exception was caught</Description>
+<Type>%String</Type>
+<Final>1</Final>
+</Property>
+
+<Method name="%OnNew">
+<FormalSpec>Name:%String="",Code:%String="",Location:%String="",Description:%String="",InnerException:%Exception.AbstractException</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    do ##super()
+    If Name = "" set Name = i%Name
+    set ..ExceptionName = Name
+    
+    do ..getSnap()
+    
+    if i%Location = "" set i%Location = ..Traceback.get(1)
+    set ..ProgramLocation = i%Location
+    
+    set ..ProgramData = i%Data
+    
+    set CompleteDescription = ##class(EasyCSP.Core.Array).%New()
+    do CompleteDescription.append("Framework Exception " _ Name _ " occurred in " _ ..ProgramLocation)
+    
+    If Description '= "" {
+        do CompleteDescription.append(Description)
+    }
+    
+    set ll = $listLength(..iStack)
+    
+    for idx = 2:1:ll {
+        do ..Traceback.append($listGet(..iStack, idx))
+    }
+    
+    /*    
+    * Depending on how the exception occurred, the following information may not be
+    * entirely accurate -- but it WILL be close!  You may have to open alternate code
+    * using <ctrl>+<alt>+V in Studio to find the right routine and line.  Due to the way
+    * Cache MVBasic compiles, the line numbers may be off by a bit.
+    */
+    If $Get( InnerException ) '= "" {
+    
+        set ..HasInnerException = 1
+    
+        do CompleteDescription.append("An inner exception also occurred:")
+        do CompleteDescription.append("Name: " _ InnerException.Name)
+        set ..InnerExceptionName = InnerException.Name
+        
+        do CompleteDescription.append("Code: " _ InnerException.Code)
+        set ..InnerExceptionCode = InnerException.Code
+        
+        do CompleteDescription.append("Loc:  " _ InnerException.Location)
+        set ..InnerExceptionLocation = InnerException.Location
+        
+        If $Get( InnerException.Data ) '= "" {
+            do CompleteDescription.append(InnerException.Data)
+        } Else {
+            set ..HasInnerException = 0
+        }
+    }
+    
+    set ..Description = CompleteDescription
+    
+    //* If logging, a Traceback will be sent to the log.  If not, the Traceback will be crammed into the error description.
+        
+    set ErrorCode = +Code ; * in case it's non-numeric, since Cache uses a string and MVB uses in integer
+    If ErrorCode = 0 set ErrorCode = 1
+    
+    set ErrorCode = ErrorCode + 10000 ; * A large number will be recognizable as "not mine"
+        
+    set ..ExceptionCode = Code
+
+    if $get(%EasyCSPExceptionStack) = "" {
+        set %EasyCSPExceptionStack = ##class(EasyCSP.Core.Array).%New()
+    }
+    
+    do %EasyCSPExceptionStack.append($this)
+        
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="getSnap">
+<Language>cache</Language>
+<Implementation><![CDATA[
+    set ..Traceback = ##class(EasyCSP.Core.Array).%New()
+    
+    set level = $STACK(-1) - 1
+    set ctr = 0
+    FOR loop= level-2:-1:0 { 
+        do ..Traceback.append( "Level "_loop_", context "_$STACK(loop)_": "_$STACK(loop,"PLACE")_ ", line: "_$STACK(loop,"MCODE"))
+        set ctr = ctr + 1
+        quit:ctr>4
+    }
+]]></Implementation>
+</Method>
+</Class>
+</Export>

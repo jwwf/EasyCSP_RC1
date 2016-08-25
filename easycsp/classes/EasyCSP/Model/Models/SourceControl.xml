@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:17">
+<Class name="EasyCSP.Model.Models.SourceControl">
+<ClassType>persistent</ClassType>
+<Language>cache</Language>
+<ProcedureBlock>1</ProcedureBlock>
+<SqlRowIdPrivate>1</SqlRowIdPrivate>
+<Super>%Persistent,EasyCSP.Model.MVBase</Super>
+<TimeChanged>64155,50473.197144</TimeChanged>
+<TimeCreated>64151,53540.029348</TimeCreated>
+<Inheritance>right</Inheritance>
+
+<Parameter name="MVAUTOLOCK">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCLEARDICT">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCREATE">
+<Type>BOOLEAN</Type>
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="MVFILENAME">
+<Description>
+Do not modify MVFILENAME if the file already exists.</Description>
+<Type>STRING</Type>
+<Default>SOURCE.CONTROL</Default>
+</Parameter>
+
+<Parameter name="MVGLOBAL">
+<Type>STRING</Type>
+<Default>^EZSOURCECONTROL</Default>
+</Parameter>
+
+<Parameter name="MVREPOPULATE">
+<Default>1</Default>
+</Parameter>
+
+<Property name="ItemId">
+<Type>%String</Type>
+</Property>
+
+<Property name="Name">
+<Description>
+Name</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="2"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Super">
+<Description>
+Super</Description>
+<Type>%Library.String</Type>
+<Collection>list</Collection>
+<Parameter name="MVATTRIBUTE" value="3"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Hidden">
+<Description>
+Hidden</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="4"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Datatype">
+<Description>
+Datatype</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="5"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="System">
+<Description>
+System</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="6"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Final">
+<Description>
+Final</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="7"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Persistent">
+<Description>
+Persistent</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="8"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Serial">
+<Description>
+Serial</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="9"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="ChangedDate">
+<Description>
+TimeChanged</Description>
+<Type>%Library.String</Type>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVATTRIBUTE" value="10"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="TimeChanged">
+<Type>%Library.String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {TimeChanged}=##class(EasyCSP.Model.Models.SourceControl).UDate({%%ID},{ChangedDate})</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,ChangedDate, &apos;D&apos;)"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVTYPE" value="I"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="SqlTableName">
+<Description>
+SqlTableName</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="11"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Abstract">
+<Description>
+Abstract</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="12"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="LastCheckoutDate">
+<Description>
+Last Checkout</Description>
+<Type>%Library.String</Type>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVATTRIBUTE" value="13"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="LastCheckout">
+<Type>%Library.String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {LastCheckout}=##class(EasyCSP.Model.Models.SourceControl).UDate({%%ID},{LastCheckoutDate})</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,LastCheckoutDate, &apos;D&apos;)"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVTYPE" value="I"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="LastCommitDate">
+<Description>
+Last Commit</Description>
+<Type>%Library.String</Type>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVATTRIBUTE" value="14"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="LastCommit">
+<Type>%Library.String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {LastCommit}=##class(EasyCSP.Model.Models.SourceControl).UDate({%%ID},{LastCommitDate})</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,LastCommitDate, &apos;D&apos;)"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVTYPE" value="I"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Namespace">
+<Description>
+The namespace in which the source resides</Description>
+<Type>%Library.String</Type>
+<Parameter name="MVATTRIBUTE" value="15"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Type">
+<Description>
+The object type. This could be "class", "external", etc.</Description>
+<Type>%String</Type>
+<Parameter name="MVATTRIBUTE" value="16"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="AddDate">
+<Description>
+Date added to git repo</Description>
+<Type>%Library.String</Type>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVATTRIBUTE" value="17"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="Added">
+<Type>%Library.String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {Added}=##class(EasyCSP.Model.Models.SourceControl).UDate({%%ID},{AddDate})</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,AddDate, &apos;D&apos;)"/>
+<Parameter name="MVJUSTIFICATION" value="R"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVTYPE" value="I"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="ClassDefinition">
+<Description>
+A copy of the latest class definition</Description>
+<Type>%Library.ClassDefinition</Type>
+<Parameter name="MVATTRIBUTE" value="18"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVPROJECTED" value="0"/>
+</Property>
+
+<Index name="indexItemId">
+<IdKey>1</IdKey>
+<PrimaryKey>1</PrimaryKey>
+<Properties>ItemId</Properties>
+</Index>
+
+<Method name="validationRules">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    do ..addConverter("super", "MVToHTML")
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="UDate">
+<Description>
+Dates are stored as an integer value in the standard POSIX epoch. This function
+converts the internal POSIX date to an external representation.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>recordId:%String,value:%String</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    @ID =recordId
+    passParameters = "EasyCSP.Core.HashArray"->%New()
+    passParameters->set("value", value)
+    passParameters->set("options", "DT")
+    return "EasyCSP.Converter.Converters.UDate"->run(passParameters)
+]]></Implementation>
+</Method>
+
+<Method name="slash">
+<ClassMethod>1</ClassMethod>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    IF SYSTEM(91) = 0 THEN RETURN( "/" ) ELSE RETURN( "\")
+]]></Implementation>
+</Method>
+
+<Method name="refresh">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>clearFile:%Boolean=0</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    mv:clearFile "CLEAR.FILE SOURCE.CONTROL"
+    
+    set %EasyCSPDebugging = 0 ; allow this to run from TCL
+    
+    do ..addClasses()
+    
+    do ..addRoutines()
+    
+    do ..addCSPFiles()
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="addClasses">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set %EasyCSPDebugging = 0 ; allow this to run from TCL
+    
+    set result=##class(%ResultSet).%New()
+    set result.ClassName="%ClassDefinition"
+    set result.QueryName="ClassInfo"
+    do result.Execute("@") // retrieve classes that begin with "A" onward
+    
+    set colCount = result.GetColumnCount()
+    
+    set names = ""
+    
+    while result.Next() {
+        
+        set itemName = result.GetData(1)
+        continue:##class(EasyCSP.SourceControl.Base).filterGenerated(itemName)=0 
+        
+        set data = ##class(EasyCSP.Core.HashArray).%New()
+        
+        for col=1:1:colCount { 
+            do data.set(result.GetColumnName(col), result.GetData(col))
+        }
+        
+        // adjust Super values to make them MV
+        set super = data.get("Super")
+        set super = $replace(super, ",", $mvvm)
+        do data.set("Super", super)
+        
+        // adjust times to make them epoch
+        set parameters = ##class(EasyCSP.Core.HashArray).%New()
+        do parameters.set("date", $piece(data.get("TimeChanged"), ",", 1))
+        do parameters.set("time", $piece($piece(data.get("TimeChanged"), ",", 2), ".", 1))
+        do parameters.set("isMV", 0)
+        do data.set("ChangedDate", ##class(EasyCSP.Converter.Converters.UDateFromPDate).run(parameters))
+        
+        do data.set("Type", "class")
+        
+        set model = $classmethod($ClassName(), "%New")
+        
+        do model.loadFromArray(data)
+        
+        set model.recordId = data.get("Name")
+        
+        do $SYSTEM.OBJ.Dump(model)
+        
+        do model.save()
+        
+        do:model.hasErrors() $SYSTEM.OBJ.Dump(model.getErrors())
+        
+    }
+    
+    do result.Close()
+    set result = ""
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="addCSPFiles">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    /*
+    / Go find everything in the CSP service file location. These items aren't
+    / exported nicely from Studio and import even less well. They still need
+    / to be in source control.
+    */
+    
+    set CPFLocation = ##class(%SYS.System).GetCPFFileName()
+    set instanceLocation = $piece(CPFLocation, ..slash(), 1, $length(CPFLocation, ..slash()) - 1)
+    set CSPLocation = instanceLocation _ ..slash() _ "csp" _ ..slash() _ $mvoconv($namespace, "MCL")
+    set ls = ..ls(CSPLocation,,"Name",1,1)
+    do ..parseLS(ls)
+]]></Implementation>
+</Method>
+
+<Method name="addRoutines">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set %EasyCSPDebugging = 0 ; allow this to run from TCL
+    
+    // Next, find all the routines (.INT, .MAC, .MVB) and include them in the list to export
+    set result = ##class(%ResultSet).%New()
+    
+    set result.ClassName = "%Routine"
+    set result.QueryName = "RoutineList"
+    do result.Execute("*",1,0)
+    
+    set colCount = result.GetColumnCount()
+    set names = ""
+    
+    while result.Next() {
+        
+        set row = ""
+        set itemName = result.GetData(1)
+        
+        set data = ##class(EasyCSP.Core.HashArray).%New()
+        
+        if ##class(EasyCSP.SourceControl.Base).filterGenerated(itemName) = 0 {
+            continue
+        }
+        
+        for col=1:1:colCount { 
+            do data.set(result.GetColumnName(col), result.GetData(col))
+        }
+        
+        do data.set("Type", "routine")
+        
+        set model = $classmethod($ClassName(), "%New")
+        do model.loadFromArray(data)
+        set model.recordId = data.get("Name")
+        do model.save()
+        
+    }
+    
+    do result.Close()
+]]></Implementation>
+</Method>
+
+<Method name="parseLS">
+<Description>
+Recursive method to trundle through the directory listing and make
+records for CSP-directory items.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>ls:EasyCSP.Core.HashArray</FormalSpec>
+<Implementation><![CDATA[
+    quit:$get(ls)=""
+    
+    set nxt = ls.Next()
+    while nxt '= "" {
+        set obj = ls.get(nxt)
+        if $get(obj)["HashArray" { // then this is a list of file names
+            if obj.get("Type") '= "" {
+                write obj.get("Name"),!
+                set data = ##class(EasyCSP.Core.HashArray).%New()
+                do data.set("Type", "external")
+                do data.set("Name", obj.get("Name"))
+                set model = $classmethod($ClassName(), "%New")
+                do model.loadFromArray(data)
+                set model.recordId = $replace(data.get("Name"), ..slash(), "_")
+                do model.save()
+            }
+        } else { // otherwise it's a new directory
+            do ..parseLS(obj)
+        }
+        set nxt = ls.Next(nxt)
+    }
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^SOURCE.CONTROL</DataLocation>
+<DefaultData>SourceControlDefaultData</DefaultData>
+<IdLocation>^C.SOURCE.CONTROL</IdLocation>
+<IndexLocation>^I.SOURCE.CONTROL</IndexLocation>
+<StreamLocation>^S.SOURCE.CONTROL</StreamLocation>
+<Data name="SourceControlDefaultData">
+<Value name="2">
+<Value>Name</Value>
+</Value>
+<Value name="3">
+<Value>Super</Value>
+</Value>
+<Value name="4">
+<Value>Hidden</Value>
+</Value>
+<Value name="5">
+<Value>Datatype</Value>
+</Value>
+<Value name="6">
+<Value>System</Value>
+</Value>
+<Value name="7">
+<Value>Final</Value>
+</Value>
+<Value name="8">
+<Value>Persistent</Value>
+</Value>
+<Value name="9">
+<Value>Serial</Value>
+</Value>
+<Value name="10">
+<Value>ChangedDate</Value>
+</Value>
+<Value name="11">
+<Value>SqlTableName</Value>
+</Value>
+<Value name="12">
+<Value>Abstract</Value>
+</Value>
+<Value name="13">
+<Value>LastCheckoutDate</Value>
+</Value>
+<Value name="14">
+<Value>LastCommitDate</Value>
+</Value>
+<Value name="15">
+<Value>Namespace</Value>
+</Value>
+<Value name="16">
+<Value>Type</Value>
+</Value>
+<Value name="17">
+<Value>AddDate</Value>
+</Value>
+<Value name="18">
+<Value>ClassDefinition</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+</Export>

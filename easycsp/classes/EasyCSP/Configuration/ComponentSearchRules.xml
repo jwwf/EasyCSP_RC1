@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:56">
+<Class name="EasyCSP.Configuration.ComponentSearchRules">
+<Description><![CDATA[
+<p>
+This class is only a convenient way to describe component search rules.
+Component search differs from object search in that object search returns
+an instance of a desired class by name. Component search on the other hand
+locates and returns the class name of a component that does not have any
+instance methods. A component, like an output converter for instance, always
+has exactly one classmethod, "run". In order to allow components like
+output converters to use the same plug-in design as the rest of EasyCSP,
+this class sets the search rules for locating components by simple name.
+</p>
+
+<p>
+As with the object factory, the local namespace packages are searched first.
+This allows for simple and rapid extension or override of framework components.
+If the desired class isn't found in local packages, EasyCSP is searched last.
+</p>]]></Description>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64138,37553.136855</TimeChanged>
+<TimeCreated>64138,37135.76128</TimeCreated>
+
+<Property name="rules">
+<Type>EasyCSP.Core.HashArray</Type>
+</Property>
+
+<Method name="%OnNew">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set ..rules = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set converterSearchRules = ##class(EasyCSP.Core.Array).%New()
+    do converterSearchRules.append("Converters")
+    do converterSearchRules.append("Converter.Converters")
+    do converterSearchRules.append("EasyCSP.Converter.Converters")
+    
+    do ..rules.set("converter", converterSearchRules)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

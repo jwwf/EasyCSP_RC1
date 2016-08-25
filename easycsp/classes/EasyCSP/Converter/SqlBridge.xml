@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:12">
+<Class name="EasyCSP.Converter.SqlBridge">
+<Description>
+Run a locator on behalf of a function call from SQL to find and execute a converter function.</Description>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64140,49541.841766</TimeChanged>
+<TimeCreated>64138,58660.755244</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String,value:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<SqlProc>1</SqlProc>
+<Implementation><![CDATA[
+
+    set converter = "" ; kill an existing oref
+    
+    quit:$get(value)="" ""
+    
+    if $get(className)="" {
+        quit value
+    }
+    
+    set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    do parameters.set("value", value)
+    
+    return ##class(EasyCSP.Core.Component).runComponent(className, "converter", 1, parameters)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

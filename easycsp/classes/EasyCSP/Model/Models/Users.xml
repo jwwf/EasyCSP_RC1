@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:18">
+<Class name="EasyCSP.Model.Models.Users">
+<Description><![CDATA[
+<p>
+User authentication table
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%Persistent,EasyCSP.Model.MVBase</Super>
+<TimeChanged>64150,80003.446361</TimeChanged>
+<TimeCreated>63532,37944.368648</TimeCreated>
+
+<Index name="indexemailAddress">
+<Data>emailAddress</Data>
+<Properties>emailAddress</Properties>
+</Index>
+
+<Index name="indexuserName">
+<IdKey>1</IdKey>
+<PrimaryKey>1</PrimaryKey>
+<Properties>userName</Properties>
+</Index>
+
+<Parameter name="MVFILENAME">
+<Default>USERS</Default>
+</Parameter>
+
+<Parameter name="MVGLOBAL">
+<Default>^USERS</Default>
+</Parameter>
+
+<Parameter name="MVAUTOLOCK">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCLEARDICT">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCREATE">
+<Type>BOOLEAN</Type>
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="MVREPOPULATE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="roleSiteAdministrator">
+<Description>
+A site administrator can adjust global settings and put the site in maintenance mode but can still log in.
+This is the all-powerful "root" level.
+This level can change anything in the system at any time.</Description>
+<Default>9999999999</Default>
+</Parameter>
+
+<Property name="userName">
+<Description>
+The user's login name</Description>
+<Type>%String</Type>
+<Required>1</Required>
+<Parameter name="MVATTRIBUTE" value="0"/>
+<Parameter name="MVHEADING" value="Login Name"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="USER_NAME"/>
+<Parameter name="MVWIDTH" value="20"/>
+</Property>
+
+<Property name="emailAddress">
+<Description>
+The user's email address. Since this is used as an alternate login identifier, it must be unique in the system.</Description>
+<Type>%String</Type>
+<Required>1</Required>
+<SqlFieldName>email_address</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="1"/>
+<Parameter name="MVHEADING" value="Email Address"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="EMAIL_ADDRESS"/>
+<Parameter name="MVWIDTH" value="35"/>
+</Property>
+
+<Property name="creationDate">
+<Description>
+The date the user was added to the system</Description>
+<Type>%BigInt</Type>
+<SqlFieldName>creation_date</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="2"/>
+<Parameter name="MVHEADING" value="Creation Date"/>
+<Parameter name="MVNAME" value="CREATION_DATE"/>
+</Property>
+
+<Property name="created">
+<Type>%String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {created}=##class(EasyCSP.Model.Models.Users).calcLastUpdate({%%ID},{creation_date})</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,CREATION_DATE, &apos;D&apos;)"/>
+<Parameter name="MVNAME" value="CREATED"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVTYPE" value="I"/>
+</Property>
+
+<Property name="lastUpdateDate">
+<Description>
+The last time this record was updated. This is in internal (epoch) format.</Description>
+<Type>%BigInt</Type>
+<SqlFieldName>last_update_date</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="3"/>
+<Parameter name="MVHEADING" value="Last Updated"/>
+<Parameter name="MVNAME" value="LAST_UPDATE_DATE"/>
+</Property>
+
+<Property name="firstName">
+<Description>
+The user's first name. This is used as a greeting and also in email.</Description>
+<Type>%String</Type>
+<Required>1</Required>
+<SqlFieldName>first_name</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="4"/>
+<Parameter name="MVHEADING" value="First Name"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="FIRST_NAME"/>
+<Parameter name="MVWIDTH" value="25"/>
+</Property>
+
+<Property name="surname">
+<Description>
+The user's last name.</Description>
+<Type>%String</Type>
+<Required>1</Required>
+<SqlFieldName>surname</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="5"/>
+<Parameter name="MVHEADING" value="Surname"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="SURNAME"/>
+<Parameter name="MVWIDTH" value="25"/>
+</Property>
+
+<Property name="lastUpdate">
+<Description>
+The last time this record was updated. This view is in external, human-readable format.</Description>
+<Type>%String</Type>
+<Calculated>1</Calculated>
+<SqlComputeCode>Set {lastUpdate}=##class(EasyCSP.Model.Models.Users).calcLastUpdate({%%ID},{last_update_date})</SqlComputeCode>
+<SqlComputed>1</SqlComputed>
+<Parameter name="COLLATION" value="MVR"/>
+<Parameter name="MVITYPE" value="SUBR(&apos;SUBR.UDATE&apos;,LAST_UPDATE_DATE, &apos;D&apos;)"/>
+<Parameter name="MVNAME" value="LAST_UPDATE"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVTYPE" value="I"/>
+</Property>
+
+<Property name="groupId">
+<Description>
+The list of groups to which this user belongs.</Description>
+<Type>%String</Type>
+<Collection>list</Collection>
+<Required>1</Required>
+<SqlFieldName>group_id</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="6"/>
+<Parameter name="MVHEADING" value="Group"/>
+<Parameter name="MVJUSTIFICATION" value="L"/>
+<Parameter name="MVNAME" value="GROUP"/>
+<Parameter name="MVWIDTH" value="15"/>
+</Property>
+
+<Method name="calcLastUpdate">
+<Description>
+Dates are stored as an integer value in the standard POSIX epoch. This function
+converts the internal POSIX date to an external representation.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>recordId:%String,value:%String</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    @ID =recordId
+    passParameters = "EasyCSP.Core.HashArray"->%New()
+    passParameters->set("value", value)
+    passParameters->set("options", "DT")
+    return "EasyCSP.Converter.Converters.UDate"->run(passParameters)
+]]></Implementation>
+</Method>
+
+<Method name="isUser">
+<Description>
+Pass in either the the userName or the emailAddress. The user Id will be returned.
+A return value of 0 (zero) indicates the user was not located.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>identifier:%String=""</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if $get(identifier) = "" then return 0
+    
+    result = 1
+    id = 0 ; * assume "No" unless proven otherwise
+    
+    model = "EasyCSP.Model.Models.Users"->%OpenId(identifier)
+    if isobject(model) then return 1
+    
+    rec = trans("USERS", identifier, 1, "X") ; * use a trans() trick to find if there's a record with the identifier as an email address
+    if rec = "" then result = 0
+    
+    return result
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/*
+*    Model event handlers
+*/
+]]></Content>
+</UDLText>
+
+<Method name="validationRules">
+<Description>
+This event is called by %OnNew() in the superclass to construct the validation rules.
+Note that "Required" is automatically set if the property definition includes a "Required" parameter.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set OK = $$$OK
+    
+    
+    set groups = ##class(EasyCSP.Model.Models.Groups).allActiveGroups()
+    do ..loadFKValues("users_groupid", groups)
+    
+    // Follow this convention to add more rules
+    set:OK OK = ..addValidationRule("users_emailaddress", "Email") ; must be a valid format
+    set:OK OK = ..addValidationRule("users_emailaddress", "isUnique") ; must be unique in the Users table
+    set:OK OK = ..addValidationRule("users_groupid", "InForeignKeyList")
+    
+    quit OK
+]]></Implementation>
+</Method>
+
+<Method name="afterQuery">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set gid = ..getAttribute("users_groupid")
+    set groups = gid.fkValues
+    
+    // There may be bad input in a user's group membership (command-line editing,
+    // outdated groups, etc). The model validation will weed out any inactive groups
+    // by dint of error messages, refusing to save until group membership is corrected.
+    // In initial display, though, incorrect membership may be show. At the moment
+    // there isn't any way to highlight errors in the user's record. Research TODO.
+    
+    set userGroups = ##class(EasyCSP.Core.Array).%New()
+    do userGroups.split(..getAttributeValue("users_groupId"), $mvvm) // here's a list of what the user has, regardless if it's right
+    
+    /*
+    set idx = userGroups.Next()
+    while idx '= "" {
+        if 'groups.hasKey(userGroups.get(idx)) { // if one of the user's groups isn't one of the recognized active groups
+            do groups.set(userGroups.get(idx), "Error: Inactive. Please remove.")
+        }
+        set idx = userGroups.Next(idx)
+    }
+    */
+    
+    //set gid.fkValues = groups
+    do ..setAttribute(gid)
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="beforeQuery">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+   
+    // The framework offers conversions for display. "UDate" converts a *nix
+    // epoch date (how date-times are stored in the record) and converts it
+    // to a human-readable date and time.
+    do ..addConverter("users_creationdate","UDate")
+    do ..addConverter("users_lastupdatedate","UDate")
+    do ..addConverter("users_groupid", "MVToHTML")
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeSave">
+<Description>
+This event, if it exists, is automatically called by save() in the superclass.
+It does not cause an error if it has not been coded in the model.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    // Always store the key as lower case. Login is case-insensitive.
+    set ..recordId = $mvoconv(..recordId, "MCL") 
+    do ..setAttributeValue("users_username", ..recordId)
+    do ..setAttributeValue("users_lastupdate", ..getUniversalTime())
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="findByIdentifier">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>identifier:%String=""</FormalSpec>
+<ReturnType>EasyCSP.Model.Models.Users</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(identifier)="" ""
+    set model = ##class(EasyCSP.Model.Models.Users).%New()
+    do model.read(identifier)
+    
+    do:%EasyCSPDebugging %EasyCSPApp.controller.debugInfo.WriteLine("<pre>findByIdentifier(): Model Users</pre>")
+    if model.getIsNewRecord() = 0 { 
+        return model
+    } else {
+    
+        set parameters = ##class(EasyCSP.Core.HashArray).%New()
+        do parameters.set("model", "users")
+        do parameters.set("noRemap", 1)
+        set query = ##class(EasyCSP.SQL.Query).%New(parameters)
+        do query.addCondition("email_address", "=", identifier)
+        set recordSet = query.getRecordset()
+        while recordSet.%Next() {
+            do model.read(recordSet.%Get("userName"))
+            quit
+        }
+    
+    }
+    
+    return model
+]]></Implementation>
+</Method>
+
+<Method name="search">
+<Description>
+Override the default (non-functioning) search() method. Each model should set the rules
+for who can access what in the database.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set canMaintain = %EasyCSPApp.controller.isSuperUser
+    set querant = %EasyCSPApp.getSession("uid")
+    quit:querant="guest" ""
+    
+    do parameters.set("model", "Users")
+    set query = ##class(EasyCSP.SQL.Query).%New(parameters)
+    do query.orderBy("userName")
+    do:'canMaintain query.addCondition("user_name", "=", %EasyCSPApp.getSession("uid"))
+    do query.run()
+    quit query.id
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^USERS</DataLocation>
+<DefaultData>UsersDefaultData</DefaultData>
+<IdLocation>^C.USERS</IdLocation>
+<IndexLocation>^I.USERS</IndexLocation>
+<StreamLocation>^S.USERS</StreamLocation>
+<Data name="UsersDefaultData">
+<Value name="1">
+<Value>emailAddress</Value>
+</Value>
+<Value name="2">
+<Value>creationDate</Value>
+</Value>
+<Value name="3">
+<Value>lastUpdateDate</Value>
+</Value>
+<Value name="4">
+<Value>firstName</Value>
+</Value>
+<Value name="5">
+<Value>surname</Value>
+</Value>
+<Value name="6">
+<Value>groupId</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+</Export>

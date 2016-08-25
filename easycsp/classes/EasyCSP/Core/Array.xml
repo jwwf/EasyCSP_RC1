@@ -1,0 +1,462 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:12">
+<Class name="EasyCSP.Core.Array">
+<Description><![CDATA[
+Extends %ListOfDataTypes with some Python/Javascript/PHP -like features
+
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64145,27302.061497</TimeChanged>
+<TimeCreated>64087,85605.552772</TimeCreated>
+
+<Property name="Data">
+<Type>%CacheString</Type>
+<Collection>list</Collection>
+<Private>1</Private>
+</Property>
+
+<Property name="Size">
+<Type>%Integer</Type>
+<InitialExpression>0</InitialExpression>
+<Private>1</Private>
+</Property>
+
+<Method name="append">
+<Description>
+`Add a value to the end of the array</Description>
+<FormalSpec>value:%String=""</FormalSpec>
+<Implementation><![CDATA[    do ..set(-1, value)
+]]></Implementation>
+</Method>
+
+<Method name="appendFrom">
+<FormalSpec>inArray:EasyCSP.Core.Array</FormalSpec>
+<Implementation><![CDATA[
+    
+    set l = inArray.length()
+    for idx = 1:1:l '= "" {
+        set value = inArray.get(idx)
+        do ..append(value)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="clear">
+<Description>
+Clear out the array structure</Description>
+<Implementation><![CDATA[
+    kill i%Data
+    set ..Size = 0
+]]></Implementation>
+</Method>
+
+<Method name="Count">
+<Description>
+Traditional-Cache alias for .length(). This returns the number
+of elements in the array.</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    quit i%Size
+]]></Implementation>
+</Method>
+
+<Method name="diff">
+<Description>
+Returns an array containing all the values that do not exist in
+both this array and the array passed in. Neither array is
+changed.</Description>
+<FormalSpec>compareArray:EasyCSP.Core.Array</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    thisDyn = @ME->toDynamicArray()
+    thisDynLength = DCount(thisDyn, @fm)
+    
+    compareDyn = compareArray->toDynamicArray()
+    compareDynLength = DCount(compareDyn, @fm)
+    
+    if thisDynLength <= compareDynLength then
+        a = compareDyn
+        b = thisDyn
+    l = compareDynLength
+    end else
+        a = thisDyn
+        b = compareDyn
+        l = thisDynLength
+    end
+    
+    * Use the shorter array to traverse.
+    newArray = "EasyCSP.Core.Array"->%New()
+    for idx = 1 to l
+        find a<idx> in b setting AMC else
+            newArray->append(a<idx>)
+        end
+    next
+    
+    return newArray
+]]></Implementation>
+</Method>
+
+<Method name="dumpAsStream">
+<Description>
+Dump the contents of the array in a two-column (key and data)
+formatted HTML table. Returns a stream that can be output to
+a web page.</Description>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    set stream = ##class(%GlobalCharacterStream).%New()
+    
+    do stream.WriteLine("<table class=""activeTable"">")
+    
+    set idx = ..Data.Next("")
+    while idx '= "" {
+        set val = ..get(idx)
+        do stream.WriteLine("<tr>")
+        do stream.WriteLine("<td>"_idx_"</td>")
+        do stream.Write("<td>")
+        if $isobject(val) {
+            do stream.Write("[object]")
+        } else {
+            do stream.Write(val)
+        }
+        do stream.Write("</td>")
+        do stream.WriteLine("</tr>")
+        set idx = ..Data.Next(idx)
+    }
+    
+    do stream.WriteLine("</table>")
+    
+    quit stream
+]]></Implementation>
+</Method>
+
+<Method name="find">
+<Description>
+Given a string somewhere in the array, return
+the node where it was found or 0 if not.</Description>
+<FormalSpec>target:%String=""</FormalSpec>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+    set o = $order(i%Data(""))
+    while o '= "" {
+        if $get(i%Data(o)) = target return o
+        set o = $order(i%Data(o))
+    }
+    quit o
+]]></Implementation>
+</Method>
+
+<Method name="flip">
+<Description>
+Reverse the order of the values in the array. Returns
+a new array leaving the original unchanged.</Description>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    set newArray = ##class(EasyCSP.Core.Array).%New()
+    for i = i%Size:-1:1 {
+        do newArray.append(i%Data(i))
+    }
+    quit newArray
+]]></Implementation>
+</Method>
+
+<Method name="get">
+<Description>
+Retrieve the value from a specific node in the array.</Description>
+<FormalSpec>position</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:+position=0 "" // if not numeric
+    quit:'$data(i%Data(position)) "" // if not defined
+    quit $get(i%Data(position))
+]]></Implementation>
+</Method>
+
+<Method name="GetAt">
+<Description>
+Support legacy .GetAt() method</Description>
+<FormalSpec>position</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[    quit ..get(position)
+]]></Implementation>
+</Method>
+
+<Method name="intersect">
+<Description>
+Returns an array containing all the values that exist in
+both this array and the array passed in. Neither array is
+changed.</Description>
+<FormalSpec>compareArray:EasyCSP.Core.Array</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>EasyCSP.Core.Array</ReturnType>
+<Implementation><![CDATA[
+    thisDyn = @ME->toDynamicArray()
+    thisDynLength = DCount(thisDyn, @fm)
+    
+    compareDyn = compareArray->toDynamicArray()
+    compareDynLength = DCount(compareDyn, @fm)
+    
+    if thisDynLength >= compareDynLength then
+        a = compareDyn
+        b = thisDyn
+    l = compareDynLength
+    end else
+        a = thisDyn
+        b = compareDyn
+        l = thisDynLength
+    end
+    
+    * Use the shorter array to traverse.
+    newArray = "EasyCSP.Core.Array"->%New()
+    for idx = 1 to l
+        find a<idx> in b setting AMC then
+            newArray->append(a<idx>)
+        end
+    next
+    
+    return newArray
+]]></Implementation>
+</Method>
+
+<Method name="isDefined">
+<FormalSpec>key:%Integer=0</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[    quit ($data(i%Data(key))'=0)
+]]></Implementation>
+</Method>
+
+<Method name="join">
+<Description><![CDATA[
+Returns the elements of the array in a delimited string. If
+a delimiter isn't supplied a comma is used. Any string of
+any length can be passed in <var>delimiter</var>.]]></Description>
+<FormalSpec>delimiter:%String=",",urlEncode:%Boolean=0</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    rtnDyn = @ME->toDynamicArray()
+    
+    if urlEncode = 1 then ; * the output is destined for a web page or download file.
+        rtnDyn = "%CSP.Page"->EscapeHTML(rtnDyn) ; * take care of entities first
+        rtnDyn = cats(reuse('"'), rtnDyn) ; * then surround each element with double-quotes
+        rtnDyn = cats(rtnDyn, reuse('"'))
+        rtnDyn = ereplace(rtnDyn, char(13):char(10), " ") ; * take out line feeds; those confuse CSV
+        rtnDyn = ereplace(rtnDyn, @am, delimiter)
+    end else
+        rtnDyn = ereplace(rtnDyn, @am, delimiter)
+    end
+    
+    return rtnDyn
+]]></Implementation>
+</Method>
+
+<Method name="length">
+<Description>
+JQuery/Python-like alias for Count()</Description>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    quit i%Size
+]]></Implementation>
+</Method>
+
+<Method name="Next">
+<Description><![CDATA[
+Finds and returns the index value of the element at the location following <var>key</var> in the list. 
+If key is a null string (""), then <b>Next</b> returns the position of the first element in the list (1).]]></Description>
+<FormalSpec>key:%Integer=0</FormalSpec>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    quit $order(i%Data(key))
+]]></Implementation>
+</Method>
+
+<Method name="pop">
+<Description>
+Pop a value off the end of the array and shorten the
+array by one.</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit:i%Size<1 ""
+    set value = i%Data(i%Size)
+    kill i%Data(i%Size)
+    set i%Size = i%Size - 1
+    quit value
+]]></Implementation>
+</Method>
+
+<Method name="remove">
+<Description>
+Removes an element and its key completely.</Description>
+<FormalSpec>key:%Integer=0</FormalSpec>
+<Implementation><![CDATA[
+    quit:+$get(key)=0
+    kill i%Data(key)
+]]></Implementation>
+</Method>
+
+<Method name="set">
+<Description>
+Set the value at a specific node in the array. If the position argument is
+-1, this works the same as .append(). If the position doesn't exist it will
+be created. If the position has a value, that value will be overwritten.</Description>
+<FormalSpec>position:%Integer,value:%String</FormalSpec>
+<Implementation><![CDATA[
+    set new = 0
+    
+    // append immediately to the end
+    set:$get(position)="" position = -1 
+    
+    if (position < 1)  {
+        set position = i%Size + 1
+        set new = 1
+    }
+    
+    set:'..isDefined(position) new = 1
+       
+    set i%Data(position) = value
+    set:new i%Size = i%Size + 1
+]]></Implementation>
+</Method>
+
+<Method name="shift">
+<Description>
+Shifts a value off the beginning of the array and shortens
+the array by one. Returns the shifted value. This works the
+same as PHP array_shift().</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set o = $order(i%Data(""))
+    quit:o="" ""
+    set value = i%Data(o)
+    kill i%Data(o)
+    set i%Size = i%Size - 1
+    quit value
+]]></Implementation>
+</Method>
+
+<Method name="split">
+<Description><![CDATA[
+Split a delimited string into an array. If <variable>delimiter</variable> is
+not supplied a comma is assumed. This does not strip spaces around elements
+in the delimited string. This is useful for splitting comma-delimited strings
+or dynamic arrays into an array structure. For instance, to compare the contents
+of a dynamic array with a comma-separated list, split both lists into an
+EasyCSP.Core.Array then use .intersect() or .diff() to return matches (or non-
+matches in the case of .diff()).]]></Description>
+<FormalSpec>source:%String="",delimiter:%String=","</FormalSpec>
+<Language>mvbasic</Language>
+<Implementation><![CDATA[
+    if $get(source) = "" then return
+    @ME->clear()
+    if $get(delimiter) = "" then delimiter = ","
+    convert delimiter to @fm in source
+    d = dcount(source, @fm)
+    for idx = 1 to d
+        @ME->append(trim(source<idx>))
+    next
+]]></Implementation>
+</Method>
+
+<Method name="splitList">
+<Description>
+Split a Cache list structure into an array</Description>
+<FormalSpec>source:%List=""</FormalSpec>
+<Language>mvbasic</Language>
+<Implementation><![CDATA[
+    if not($listValid(source)) = "" then return
+    source = $listToString(source, @fm)
+    @ME->clear()
+    d = dcount(source, @fm)
+    for idx = 1 to d
+        @ME->append(source<idx>)
+    next
+]]></Implementation>
+</Method>
+
+<Method name="toDynamicArray">
+<Description>
+Returns a string representation of the elements in the array
+delimited by attribute marks.</Description>
+<FormalSpec>quoteStrings:%Boolean=0</FormalSpec>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    rtnDyn = ""
+    
+    key = @ME->Next("")
+    
+    loop while key <> "" do
+    
+        value = @ME->get(key)
+        
+        if quoteStrings then
+        
+            if (oconv(value, "MCN") <> value) then 
+                value = squote(value)
+            end
+            
+            if value = "" then value = '""'
+        end
+        
+        rtnDyn<-1> = value
+        key = @ME->Next(key)
+        
+    repeat
+    
+    return rtnDyn
+]]></Implementation>
+</Method>
+
+<Method name="toJSON">
+<Description>
+Returns the elements of the array as JSON.</Description>
+<Language>mvbasic</Language>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    nvPairs = @ME->toDynamicArray(1)
+    convert @vm:@fm to ":," in nvPairs
+    return "[" : nvPairs : "]"
+]]></Implementation>
+</Method>
+
+<Method name="union">
+<Description>
+Merges this array with another, leaving unique values from both in this array</Description>
+<FormalSpec>otherArray:EasyCSP.Core.Array=""</FormalSpec>
+<Implementation><![CDATA[
+    set idx = otherArray.Next()
+    while idx '= "" {
+        do:'..find(otherArray.get(idx)) ..append(otherArray.get(idx))
+        set idx = otherArray.Next(idx)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="unshift">
+<Description>
+Adds a value to the beginning of the array and shifts the
+original elements up by one.</Description>
+<FormalSpec>element:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    For i=i%Size:-1:1 Set i%Data(i+1)=i%Data(i)
+    Set i%Data(1)=element,i%Size=i%Size+1
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Storage name="Custom">
+<Type>%Library.CompleteCustomStorage</Type>
+</Storage>
+</Class>
+</Export>

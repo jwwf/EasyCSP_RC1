@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:59">
+<Class name="EasyCSP.Controller.Controllers.Documentation">
+<Description><![CDATA[
+Manage the display of EasyCSP internal class documentation.
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Controller.Base</Super>
+<TimeChanged>64146,48860.900148</TimeChanged>
+<TimeCreated>64141,30604.000968</TimeCreated>
+
+<Method name="accessRules">
+<Description>
+Access rules</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // Allow any user access to the documentation.
+    do ..addAccessRule("index", "*", "*")
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="actionIndex">
+<Description>
+Index page. Buttons may be customized down to a per-person view. Since no
+one should edit the documentation by hand, only show the detail-view
+button. The model handles the search as is appropriate.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set model = ##class(EasyCSP.Core.Component).objectFactory("Documentation", "model")
+    if '..instanceOf( model, "Documentation") {
+        throw ##class(EasyCSP.Core.Exception).%New($classname($this),"I10","","Can not obtain an instance of model Documentation")
+        quit 0
+    }
+    
+    do parameters.set("model", model)
+    
+    set queryId = %EasyCSPApp.getCGI("queryId")
+    if queryId = "" {
+        do parameters.set("select","ClassId,CacheVersion,ClassType,Description")
+        set queryId = $classmethod(model.%ClassName(1), "search", parameters)
+    }
+    
+    do parameters.set("allowDownload", 1)
+    do parameters.set("downloadName", "Documentation.csv")
+    do parameters.set("noCreate", 1)
+    do parameters.set(%EasyCSPApp.getRequestData("pageNumber"))
+    do parameters.set(%EasyCSPApp.getRequestData("pageSize"))
+    do parameters.set("queryId", queryId)
+    
+    // Show only the View button. The documentation shouldn't be edited by hand.
+    set buttons = ##class(EasyCSP.Core.Array).%New()
+    do buttons.append(##class(EasyCSP.Web.Widget.ButtonColumn).defineButton("viewmethods", "View Methods", "list-green-bullet.png"))
+    do buttons.append(##class(EasyCSP.Web.Widget.ButtonColumn).defineButton("viewproperties", "View Properties", "list-green-check.png"))
+    set buttonSave = ##class(EasyCSP.Rendering.json).toString(##class(EasyCSP.Rendering.json).toJSON("buttons", buttons))
+    
+    set ^queryOut(queryId, "buttons") = buttonSave
+    
+    quit ..render("QueryResult", parameters)
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionViewMethods">
+<Description>
+Drill into a class record methods</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // Which class record?
+    set id=""
+    set:$get(parameters)["HashArray" id = parameters.get("id")
+    set:id="" id = %EasyCSPApp.getRequestData("id")
+    
+    // Retrieve that one
+    set viewArray = ##class(EasyCSP.Model.Models.Documentation).methods(id)
+    
+    // Pass data to a view through a Framework parameter structure.
+    do parameters.set("array", viewArray)
+    do parameters.set("pageTitle", id_" Methods")
+    
+    // ... and render the view in its layout
+    quit ..render("ArrayView", parameters)
+]]></Implementation>
+</Method>
+
+<Method name="actionViewProperties">
+<Description>
+Drill into a class record properties</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // Which group record?
+    set id=""
+    set:$get(parameters)["HashArray" id = parameters.get("id")
+    set:id="" id = %EasyCSPApp.getRequestData("id")
+    
+    // Retrieve that one
+    set viewArray = ##class(EasyCSP.Model.Models.Documentation).properties(id)
+    
+    // Pass data to a view through a Framework parameter structure.
+    do parameters.set("array", viewArray)
+    do parameters.set("pageTitle", id_" Properties")
+    
+    // ... and render the view in its layout
+    quit ..render("ArrayView", parameters)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:37">
+<Class name="EasyCSP.Web.Client.DynamicScript">
+<Description>
+Read a script from {cspdir)/dynamic/{scriptname{.js, make variable substitutions in the text
+then return a GlobalTempStream ready to register in the scripts stream. Such scripts will be
+rendered in-line in the page at the location specified in the registration call.</Description>
+<Language>mvbasic</Language>
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>64142,69058.206655</TimeChanged>
+<TimeCreated>64094,38978.23514</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>scriptName:%String="",parameters:EasyCSP.Core.HashArray</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    if $get(scriptName)="" then return ""
+    
+    * Add the default parameters so the builder can operate
+    parameters->copyFrom( @ME->getEnv() )
+    
+    * Remove configuration settings that shouldn't be exposed
+    
+    documentRoot = parameters->getAndRemove("documentRoot")
+    instanceName = parameters->getAndRemove("instanceName")
+    namespace = parameters->getAndRemove("namespace")
+    machineName = parameters->getAndRemove("machineName")
+    
+    if system(91) = 0 then namespace = oconv(namespace, "MCL")
+    
+    slash = if (SYSTEM(91)=1) then "\" else "/"
+    fileName = documentRoot : @fm : namespace : @fm : "js" : @fm : "dynamic" : @fm : scriptName
+    
+    convert @fm to slash in fileName
+    
+    parameters->set("filename", fileName)
+    
+    convert "\/" to slash:slash in fileName ; * fix the slashes for this host platform
+    
+    eol = if (SYSTEM(91) = 1) then char(13) : char(10) else char(10)
+    output = "%GlobalCharacterStream"->%New()
+    *output->LineTerminator = eol ; * use the appropriate end-of-line character
+    
+    scriptFile = "%File"->%New(fileName)
+    scriptFile->Open("R")
+    
+    *"%SYSTEM.OBJ"->Dump(parameters)
+           *output->CopyFrom(@ME->captureObjDump(parameters))
+    
+    parmNames = parameters->keys()
+    parmSize = dcount(parmNames, @am)
+    for idx = 1 to parmSize
+        parmName = parmNames<idx>
+        parmValue = parameters->get(parmName)
+        if (index($get(parmValue),"Core.Array", 1) > 0) or (index($get(parmValue),"Core.HashArray", 1) > 0) then
+            output->WriteLine("var " : parmName : " = " : parmValue->toJSON())
+        end else
+            output->WriteLine("var " : parmName : " = '" : parmValue : "'")
+        end
+    next
+    
+    output->WriteLine(eol) ; * add a blank line for visual spacing
+    
+    *output->CopyFrom(scriptFile)
+    * CopyFrom would have been nice but it doesn't respect the end of line options
+    * so it has to be done the hard way.
+    loop while (scriptFile->AtEnd = 0) do
+        length = 4096
+        output->WriteLine(scriptFile->ReadLine(length))
+    repeat
+            
+    
+    scriptFile->Close()
+    
+    output->Rewind()
+    
+    return output
+]]></Implementation>
+</Method>
+
+<Method name="getEnv">
+<ClassMethod>1</ClassMethod>
+<Language>cache</Language>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[
+    set rtn = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // CSP service directory. Scripts will live under this folder.
+    do rtn.set("documentRoot", %EasyCSPApp.getCGI("DOCUMENT_ROOT"))
+    
+    // Cache instance name
+    do rtn.set("instanceName", $P($zu(86),"*",2))
+    
+    // The Cache host name that's running
+    do rtn.set("machineName", $zu(110))
+    
+    // The current namespace
+    do rtn.set("namespace", $NAMESPACE)
+    
+    // The EasyCSP base URL
+    do rtn.set("baseURL", %EasyCSPApp.getBaseUrl())
+    
+    // Controller
+    do rtn.set("controller", %EasyCSPApp.controller.id)
+    
+    // action
+    do rtn.set("action", %EasyCSPApp.controller.action)
+    
+    quit rtn
+]]></Implementation>
+</Method>
+
+<Method name="dumpOutput">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>var:%GlobalCharacterStream</FormalSpec>
+<Language>cache</Language>
+<Implementation><![CDATA[
+    write "<pre>",!
+    d var.Rewind()
+    while (var.AtEnd '= 1) {
+        set len = 4096
+        write var.ReadLine(len)
+    }
+    write "</pre>",!
+]]></Implementation>
+</Method>
+</Class>
+</Export>

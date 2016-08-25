@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:25">
+<Class name="EasyCSP.SQL.ModelSelect">
+<Description><![CDATA[
+Column or array of columns to select from the table.
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>64144,44470.478208</TimeChanged>
+<TimeCreated>64141,46500.821143</TimeCreated>
+
+<Property name="attributes">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Property name="columnLabels">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Property name="columnNames">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Property name="idColumn">
+<Type>%String</Type>
+</Property>
+
+<Property name="idColumnLabel">
+<Type>%String</Type>
+</Property>
+
+<Property name="noRename">
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Method name="%OnNew">
+<FormalSpec>model:EasyCSP.Model.Base="",attributeFinder:%String="*"</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    if $get(model) = "" quit $$$ERROR("Must supply a valid instance of an EasyCSP.Model.Base extent.")
+    
+    set:$get(attributeFinder)="" attributeFinder = "*"
+    set ..attributes = ##class(EasyCSP.Core.Array).%New()
+    set ..columnLabels = ##class(EasyCSP.Core.Array).%New()
+    set ..columnNames = ##class(EasyCSP.Core.Array).%New()
+    
+    if attributeFinder = "*" {
+    
+        set columnOrder = model.columnOrder
+        set finder = columnOrder.Next()
+        while finder '= "" {
+            
+            set atbDef = model.getAttribute(columnOrder.get(finder))
+            
+            if 'atbDef.hasConverter() {
+                do ..columnNames.append(atbDef.sqlFieldName)
+            } else {
+                do ..columnNames.append(##class(EasyCSP.SQL.Expression).run(atbDef))
+            }
+            
+            if atbDef.isPK {
+                set ..idColumn = atbDef.sqlFieldName
+                set ..idColumnLabel = atbDef.label
+            }
+            
+            do ..attributes.append(atbDef.name)
+            do ..columnLabels.append(atbDef.label)
+            
+            set finder = columnOrder.Next(finder)
+        }
+        quit $$$OK
+    }
+    
+    set ..columnNames = ##class(EasyCSP.Core.Array).%New()
+    
+    set finderList = $listToString(..listFromString(attributeFinder), ",") ; accept a comma-delimited list
+    set finders = ##class(EasyCSP.Core.Array).%New()
+    do finders.split(finderList)
+    
+    set idx = finders.Next()
+    while idx '= "" {
+        set attribute = model.getAttribute(finders.get(idx))
+        if $isobject(attribute) {        
+            do ..columnLabels.set(attribute.name, attribute.label)
+            do ..columnNames.append(attribute.sqlFieldName)
+        }
+        set idx = finders.Next(idx)
+    }
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="render">
+<FormalSpec>noRemap:%Boolean=0</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    set noRemap = +$get(noRemap) ; if this is set then don't insert the "AS 'col_label'" clause
+    
+    set rtn = ##class(EasyCSP.Core.Array).%New()
+    
+    set idx = ..columnNames.Next()
+    while idx '= "" {
+        if noRemap {
+            do rtn.append(..columnNames.get(idx))
+        } else {
+            do rtn.append(..columnNames.get(idx) _ " AS """ _ ..columnLabels.get(idx) _ """")
+        }
+        
+        set idx = ..columnNames.Next(idx)
+    }
+    
+    return rtn.join(", ")
+]]></Implementation>
+</Method>
+</Class>
+</Export>

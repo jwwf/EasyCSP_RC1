@@ -1,0 +1,536 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:39">
+<Class name="EasyCSP.Web.Widget.ControlGroup">
+<Description><![CDATA[
+<p>
+Using a model's attributes, create a form control group consisting of a label, an
+input of some sort, and an area for attribute validation error messages. This
+class looks in a model attribute's value, displayTraits, valueList, and fkValues
+properties to make some informed guesses as to what kind of input to display,
+what input masking to use (as in the case of dates or currency, for example),
+and what kind(s) of client-side input validation to perform before sending
+cleaned input back to the server.
+</p>
+
+<p>
+For numeric values, the model should set "min" and "max" displayTraits. This
+can be done in the model's validationRules event. Similarly, if a column
+isn't labled or named with "phone" in it, a mask and validation can be set
+in the displayTraits (plus validation, depending on how the number is stored).
+</p>
+
+<p>
+Formatting for dates may also be similarly stated. All dates will be returned
+to the server in YYYY-MM-DD format. Storage can be normalized to the model's
+internal formal in the model's beforeSave() and/or the beforeValidate() events.
+Keep in mind that validation is <i>always</i> performed before model .save().
+If a model validate() or save() function is returning an error to the controller
+then it will be necessary to add a model rule to cover normalization. A controller
+does not (and must not) concern itself with storage rules. Since "date" could
+mean many things (*nix epoch, Cache epoch, or MV epoch), it's the model's job
+to turn external representations into the appropriate internal format.
+</p>
+
+<p>
+If a mask rule is constant in all circumstances, it would be appropriate to place it
+in a model's afterConstruct() event.
+</p>
+
+<p>
+To hide an input, set displayTrait "nodisplay" to 1. A hidden input field will
+be produced.
+</p>
+
+<p>
+To make an input read-only, set displayTrait "readonly" to 1.
+</p>
+
+<p>
+As with any EasyCSP component, please do not modify this class. Clone it, place
+the clone in your local Web.Widget sub-project, then modify <i>that</i> to suit
+a particular installation's requirements. Any modifications to this class will
+be overwritten on upgrade. This class also depends wholly on css for visual effect.
+There again, do not modify default.css; clone it into another file, modify to suit,
+then clone the default layout class, modify the default css include-line to use
+your css. In your controllers, set ..layoutName to use your layout instead of
+the framework default. See <class>EasyCSP.Controller.Base</class> for
+further details.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+  <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>
+  
+</p>]]></Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64152,39466.613671</TimeChanged>
+<TimeCreated>63539,32874.065463</TimeCreated>
+
+<Property name="evenOddCounter">
+<Type>%Integer</Type>
+<InitialExpression>3</InitialExpression>
+<Private>1</Private>
+</Property>
+
+<Property name="maskList">
+<Description>
+The form generator will need this at the end of control-group
+generation to output one last script that delivers un-masked,
+validated values to the controller.</Description>
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Method name="afterConstruct">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set ..evenOddCounter = 0
+    
+    set ..ReturnGeneratedOutput = 1
+    do %EasyCSPApp.controller.layout.scripting.registerScriptFile("formInputMasking", "jquery.mask.min.js", $Parameter("EasyCSP.Web.Client.Scripts","posHead"))
+    set ..ReturnGeneratedOutput = 1
+    do %EasyCSPApp.controller.layout.scripting.registerScriptFile("datetimepicker", "bootstrap-datetimepicker.min.js", $Parameter("EasyCSP.Web.Client.Scripts","posHead"))
+    //do %EasyCSPApp.controller.layout.scripting.addAndEnqueueCSSPackage("datetimepicker","css/bootstrap-datetimepicker.min.css", "bootstrap")
+    
+    // Call in the multi-select jquery plugin. The scripting master object lives
+    // in the layout.
+    do %EasyCSPApp.controller.layout.scripting.registerCoreScript("multiselect")
+    do %EasyCSPApp.controller.layout.scripting.addAndEnqueueCSSPackage("multiselect", "js/lou-multi-select-cf6d6c6/css/multi-select.css", "jquery")
+
+    set ..jsMaskTypes = ##class(EasyCSP.Core.HashArray).%New()
+    set ..maskList = ##class(EasyCSP.Core.Array).%New()
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="run">
+<Description><![CDATA[
+<p>
+Place a control group for a model attribute into a web page. A control
+group is a label, an input of some sort, and a placeholder for error
+messages. If attributeName is empty, all attributes in a model will be
+used. Otherwise, attributeName is a comma-delimited list of attributes
+in a model. If an attribute named in the list doesn't exist it will be
+skipped. No error will be produced.
+</p>
+
+<p>
+The outer enclosure type defaults to 0 or "div". If it is set to 1 then
+the control group is rendered as an unordered list.
+</p>
+]]></Description>
+<FormalSpec>attribute:EasyCSP.Model.attribute,finder:%String=""</FormalSpec>
+<Implementation><![CDATA[
+    
+    set:$get(finder)="" finder = attribute.name
+    
+    set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set ..evenOddCounter = ..evenOddCounter + 1
+    
+    set outerEnclosureTag = "ul"
+    set elementEnclosureTag = "li"
+    
+    // If there's a "type" argument in the input parameters then use what the programmer asked.
+    set type = ..guessInputType(attribute)
+    quit:type="nodisplay" ""
+    
+    /**************************************************************************
+    *
+    *                            Control div/ul start
+    *
+    **************************************************************************/
+    set ..ReturnGeneratedOutput = 0
+    do parameters.set("id", finder_"ControlGroup")
+    
+    if ..evenOddCounter#2 = 1 {
+        do parameters.set("class", "controlGroup controlGroupOdd")
+    } else {
+        do parameters.set("class", "controlGroup controlGroupEven")
+    }
+    
+    do ..openTag(outerEnclosureTag, parameters)
+    
+    
+    /**************************************************************************
+    *
+    *                                   Label
+    *
+    **************************************************************************/
+    do parameters.unsetAll()
+    do parameters.set("id", finder_"labelDiv")
+    do ..openTag(elementEnclosureTag,parameters)
+    
+    do parameters.unsetAll()
+    
+    // If input is required on this attribute then output the marker
+    // (default is a red asterisk) for a user-cue.
+    do:(attribute.required=1)!(attribute.displayTraits.get("required")'="") parameters.set("required", 1)
+    
+    // Identify it for JQuery. Custom scripts can leverage the label area. Label id
+    // is always the attribute finder-name concatenated with "Label". For example,
+    // if the attribute class name is groupId, the finder would be groupid, and the
+    // label would be groupidLabel.
+    do parameters.set("id",finder_"Label")
+    
+    // The attribute's property documentation (the propaganda above a property that begins
+    // with the Documatic "///" command) is used to create the tooltip.
+    if attribute.tooltip '= "" do parameters.set("title", attribute.tooltip)
+    
+    // Add the label to the output
+    do ..label(attribute.label,finder,parameters)
+    
+    do ..closeTag(elementEnclosureTag)
+        
+    // Try to guess the right input type. This should work for 95% of the cases. If one gets
+    // missed it's easy enough to do one of two things: either label or name password attributes
+    // with "pass" or "pwd" in the name
+    do parameters.unsetAll()
+    
+    
+    /**************************************************************************
+    *
+    *                                   Input
+    *
+    **************************************************************************/
+    
+    do parameters.unsetAll()
+    do parameters.set("id", finder_"inputDiv")
+    do ..openTag(elementEnclosureTag,parameters)
+    
+    // The model should set parameters for things like numeric inputs. For example,
+    // for currency and numbers, set a minimum (trait "min") and a maximum
+    // (trait "max")
+    set traitName = attribute.displayTraits.Next("")
+    while traitName '= "" {
+        set val = attribute.displayTraits.get(traitName)
+        do parameters.set(traitName,val)
+        set traitName = attribute.displayTraits.Next(traitName)
+    }
+    
+    // The input id. The id will have the same value as the attribute finder.
+    // On POST, a model can be loaded directly from request input and the
+    // contents validated in a single call.
+    do parameters.set("id", finder)
+    do parameters.set("name", finder)
+    
+    /**************************************************************************
+    *
+    *                              input masks
+    *
+    **************************************************************************/
+        
+    
+    // If the field is for dates then use the JQuery UI datepicker control
+    if type = "date" {
+        set type = "text"
+        set datescript = "$(function() [" _ ..crlf _
+            "   $(""#"_finder_""").datepicker();" _ ..crlf _
+            "   $(""#"_finder_""").mask(""0000/00/00"");" _ ..crlf _
+            "});" _ ..crlf
+        do %EasyCSPApp.controller.layout.scripting.registerScript(finder_"Date", datescript, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
+        do ..maskList.append(finder)
+    }
+    
+    if type = "phone" {
+        set phonescript = "$(function() {" _ ..crlf _
+            "   $(""#"_finder_""").mask(""(000) 000-0000"");" _ ..crlf _
+            "});" _ ..crlf
+        do %EasyCSPApp.controller.layout.scripting.registerScript(finder_"Date", phonescript, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
+        do ..maskList.append(finder)
+        do parameters.unset("phone")
+    }
+    
+    if type = "password" {
+        do parameters.set("class", "login-field login-field-password")
+        do %EasyCSPApp.controller.layout.scripting.registerCoreScript("showhidepassword")
+        set showHideScript = "    $(function() {" _ ..crlf _
+            "$('#"_finder_"').password().on('show.bs.password', function(e) {" _ ..crlf _
+            "   $('#eventLog').text('On show event');" _ ..crlf _
+            "   $('#methods').prop('checked', true);" _ ..crlf _
+            "}).on('hide.bs.password', function(e) {" _ ..crlf _
+            "        $('#eventLog').text('On hide event');" _ ..crlf _
+            "        $('#methods').prop('checked', false);" _ ..crlf _
+            "   });" _ ..crlf _
+            "$('#methods').click(function() {" _ ..crlf _
+            "   $('#"_finder_"').password('toggle');" _ ..crlf _
+            "});" _ ..crlf _
+            "});"
+            
+        do %EasyCSPApp.controller.layout.scripting.registerScript(finder_"showHideScript",showHideScript, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"))
+
+    }
+    
+    if attribute.required=1 {
+        do parameters.set("required", 1)
+        do parameters.set("style", "border: 2px solid yellow")
+    }
+    
+    if attribute.errors.length() > 0 do parameters.set("style", "border: 2px solid red")
+    
+    if (+attribute.width'=0) & ((type="text")!(type = "email")) {
+        do parameters.set("size", attribute.width)
+        do parameters.set("maxlength", attribute.width)
+    }
+    
+    if (type="password") ! (type="email") do parameters.set("autocomplete", "off")
+    
+    if type = "textarea" {
+        do attribute.displayTraits.unset("textarea")
+        do ..addContent(..textArea(attribute, parameters))
+        
+        set sizeTextAreas = "$( function() { $(""textarea"").each( function( i, el ) { $(el).height( el.scrollHeight ); });});"
+        
+        do %EasyCSPApp.controller.layout.scripting.registerScript("textareasize", sizeTextAreas, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
+    
+            
+    } elseif type = "select" {
+        // Two scenarios apply: either a list of foreign-key/description
+        // name-value pairs exists in fkValues or a hard-coded list of
+        // acceptable values exists in valueList. In either case, these
+        // are the ONLY acceptable values. Some translation is required
+        // between the two types of lists. The selectbox call expects
+        // name-value pairs for the options. For ease
+        set selectedValues = ##class(EasyCSP.Core.Array).%New()
+        do selectedValues.split(attribute.value, $mvvm)
+        
+        // 
+        if attribute.displayTraits.hasKey("multiselect") {
+            do ..multipaneSelect(attribute, parameters)
+        } else {
+        
+            if attribute.fkValues.Count() > 0 {
+                set values = attribute.fkValues
+            } else {
+                
+                set values = ##class(EasyCSP.Core.HashArray).%New()
+                set key = attribute.valueList.Next()
+                set ctr = 1
+                while key '= "" {
+                    set val = attribute.valueList.get(key)
+                    do values.set(val, $mvoconv(val, "MCT"))
+                    set key = attribute.valueList.Next(key)
+                    set ctr = ctr + 1
+                    if ctr > 15 quit
+                }
+            }
+            do ..selectBox(values, selectedValues, parameters)
+        }
+        
+    } else {
+        do ..addContent(..inputField(type, finder, attribute.value, parameters))
+    }
+    
+    do ..closeTag(elementEnclosureTag)
+    
+    /**************************************************************************
+    *
+    *                              Error Messages
+    *
+    **************************************************************************/
+        
+    // Optional inner div: validation error list
+    // If this is a redraw of the page and the attribute failed validation on the previous pass,
+    // then display the errors beneath the input.
+    do parameters.unsetAll()
+    do parameters.set("id", finder_"ErrorDiv")
+    do parameters.set("class", "errorMessage")
+    do ..openTag(elementEnclosureTag,parameters)
+    
+    for e = 1:1:attribute.errors.length() {
+        do ..addContent(..tag("p", parameters, attribute.errors.get(e), 1))
+    }
+    
+    do ..closeTag(elementEnclosureTag)
+    
+    // end the optional error div/ul
+    do ..closeTag(outerEnclosureTag)
+    
+    // visual spacer to separate colors from row to row
+    //do ..addContent("<p class=""controlGroupSpacer"">&nbsp;</p>")
+    
+    do ..stream.Rewind()
+    
+    // ready the content for immediate use
+    quit ..stream
+]]></Implementation>
+</Method>
+
+<Method name="multipaneSelect">
+<Description>
+Draw a multi-pane select series. NOTE: the styling comes from bootstrap,
+not the framework css. To change the styling, copy the default.css into
+your own file, modify to suit, and add override classes.</Description>
+<FormalSpec>attribute:EasyCSP.Model.attribute,parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    set id = parameters.get("id") ; save this: "from" and "to" have different id's
+    if id = "" {
+        do ..addContent("<p class=""error"">Missing ID for select panes.</p>")
+        quit
+    }
+    
+    // What's in the record? It may or may not be correct but it's present.
+    set valuesInAttribute = ##class(EasyCSP.Core.Array).%New()
+    do valuesInAttribute.split(attribute.value, $mvvm)
+    
+    //do ..debugDump(attribute.value)
+    //do ..debugDump(valuesInAttribute)
+    
+    // Next, the valid values will either be in a value-list or in the foreign-key
+    // value list. Only one can be used.
+        
+    if attribute.fkValues.Count() > 0 {
+        set validValues = attribute.fkValues
+    } else {
+        
+        set validValues = ##class(EasyCSP.Core.HashArray).%New()
+        set key = attribute.valueList.Next()
+        set ctr = 1
+        while key '= "" {
+            set val = attribute.valueList.get(key)
+            do validValues.set(val, $mvoconv(val, "MCT"))
+            set key = attribute.valueList.Next(key)
+            set ctr = ctr + 1
+            //quit:ctr>15
+        }
+    }
+    
+    
+    set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // Left-hand pane
+    //do htmlOptions.set("class", "ms-container")
+    do ..openTag("div", htmlOptions)
+    
+    // "multiselect_"_
+    do parameters.set("id", id)
+    do parameters.set("name", id)
+    do parameters.set("multiple", "multiple")
+    do ..selectBox(validValues, valuesInAttribute, parameters)
+    do ..closeTag("div")
+    do parameters.unset("multiple") // this is the pane where valid values live
+    
+    set js = "$('#"_id_"').multiSelect({" _ ..crlf _
+        "selectableHeader: ""<div class='custom-header'>Available Options</div>""," _ ..crlf _
+        "selectionHeader: ""<div class='custom-header'>Selected Options</div>""," _ ..crlf _
+        "selectableFooter: ""<div class='custom-header'>Click to add to the record</div>""," _ ..crlf _
+        "selectionFooter: ""<div class='custom-header'>Click to remove from the record</div>""" _ ..crlf _
+        "});"
+    do %EasyCSPApp.controller.layout.scripting.registerScript("multi_"_id, js, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
+]]></Implementation>
+</Method>
+
+<Method name="guessInputType">
+<Description><![CDATA[
+<p>
+jQuery is loaded with each page. This method leverages jQuery typing and validation
+by changing the default "text" type to a type that can be managed by jQuery.
+</p>
+
+<p>
+There are three main scenarios for handling multivalue attributes:
+<ol>
+<li>
+There is a list of name-value pairs in fkValues. These are
+foreign keys and a description. These are the only acceptable
+values that may be selected.
+</li>
+<li>
+There is a list of values in valueList. These are the only acceptable
+values but are not name-value pairs; only a list of acceptable values.
+</li>
+<li>
+Both fkValues and valueList are empty. Any value may be added using
+a textarea control. Each line in the textarea is a new value. An
+example would be a street address that has one or more lines.
+</li>
+</ol>
+</p>]]></Description>
+<FormalSpec>attribute:EasyCSP.Model.attribute=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+
+        if attribute.displayTraits.get("nodisplay") = 1 {
+            return "nodisplay" // nothing to do
+        }
+        
+        /*
+        // If the attribute description isn't complete then default to a text input box.
+        if (attribute.sqlFieldName = "") {
+            return "text"
+        }
+        */
+
+        // If the attribute description isn't complete then default to a text input box.
+        if attribute.type = "" {
+            return "text"
+        }
+        
+        // Allow the controller to elect for a textbox for long strings
+        if (attribute.type) = "string" & (attribute.displayTraits.get("textarea") '= "") {
+            return "textarea"
+        }
+
+        // If there's no default label, use the column name to create one.
+        if attribute.label = "" {
+            set attribute.label = ..columnToLabel(attribute.sqlFieldName)
+        }
+        
+        // Similarly, a limited set of choices can be displayed in a select box. The
+        // attribute fkValues should hold a list of acceptable choices as name-value
+        // pairs. The key should be the item ID of a record in the file used for storing
+        // the choices and the value would likely be the display name or description of
+        // what the key means.
+        if attribute.fkValues.length() > 0 {
+            return "select"
+        }
+        
+        if attribute.valueList.length() > 0 {
+            return "select"
+        }
+        
+        if attribute.collection '= "" {
+            return "textarea"
+        }
+        
+        if attribute.displayTraits.get("timestamp") = 1 return "timestamp"
+
+        set label = $mvoconv(attribute.label, "MCL")
+        set name = $mvoconv(attribute.sqlFieldName, "MCL")
+        set type = $mvoconv(attribute.type, "MCL")
+
+        if (type = "boolean") return "checkbox"
+
+        if (type = "date") ! (label [ "date") return "date"
+
+        if (type = "time") ! (label [ "time") return "time"
+        
+        if (type = "phone") ! (label [ "phone") return "phone"
+        
+        if (type = "email") ! (label [ "email") return "email"
+
+        if (type = "integer") ! (type [ "number") return "number"
+        
+        if (type = "password") return "password"
+
+        if (type [ "string") {
+            if (type = "password") ! (type = "pwd") return "password"
+            if (label [ "pass") ! (label [ "pwd") ! (name [ "pass")  ! (name [ "pwd") return "password"
+            if (label [ "email") return "email" // jQuery type
+        }
+
+        // default catch-all
+        return "text"
+]]></Implementation>
+</Method>
+</Class>
+</Export>

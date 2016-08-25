@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:16">
+<Class name="EasyCSP.Model.Factory">
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>64109,59302.771824</TimeChanged>
+<TimeCreated>63610,21983.989973</TimeCreated>
+
+<Method name="run">
+<Description><![CDATA[
+Pass in the class name of the model to create. This function will first look in the local namespace
+for a "models.<i>modelId</i>" package. If it's not found as the supplied classname, the classname as
+converted to title case and the local search is performed again. If the class is not located anywhere in
+the local workspace then the "EasyCSP.models.<i>modelId</i>" package is searched. If the model isn't found
+in the EasyCSP.Models package, the class name is again title-cased and one last search is performed.
+Return 0 if the class can not be located or can not be instantiate. If the result is 1 then
+the "model" parameter will have an instatiated model object in it.]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String=""</FormalSpec>
+<ReturnType>EasyCSP.Model.Base</ReturnType>
+<Implementation><![CDATA[
+    set classNameUC = $mvoconv(className, "MCU")
+    set classNameTC = $mvoconv(className, "MCT")
+    set classNameLC = $mvoconv(className, "MCL")
+    
+    set model = "" ; kill an existing oref
+    if $get(className)="" {
+        throw ##class(EasyCSP.Core.Exception).%New("EasyCSP.Model.Factory", 500, "Must pass in a class name to find")
+    }
+    
+    //
+    // first, try the local Models folder
+    // 
+    // 
+    // ... with the class name exactly as supplied
+    set fqcn = "Models."_className ; fully-qualified class name
+    set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    
+    // If not, try the local Models folder with the model name title-cased.
+    if '$IsObject(def) {
+        set fqcn = "Models."_classNameTC ; fully-qualified class name
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    // If not, try the local Models folder with the model name lower-cased.
+    if '$IsObject(def) {
+        set fqcn = "Models."_classNameLC ; fully-qualified class name
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    // No? Try EasyCSP.Models with the class name as-is
+    if '$IsObject(def) {
+        set fqcn = "EasyCSP.Models."_className ; fully-qualified class name
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    // Look in EasyCSP.Models with the classname title-cased.
+    if '$IsObject(def) {
+        set fqcn = "EasyCSP.Models."_classNameTC ; fully-qualified class name
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    // Look in EasyCSP.Models with the classname lower-cased.
+    if '$IsObject(def) {
+        set fqcn = "EasyCSP.Models."_classNameLC ; fully-qualified class name
+        set def = ##class(%Dictionary.ClassDefinition).%OpenId(fqcn)
+    }
+    
+    // No model can be located anywhere
+    if '$IsObject(def) {
+        throw ##class(EasyCSP.Core.Exception).%New("EasyCSP.Model.Factory", 500, "Could not locate a model using "_className)
+    }
+    
+    // Try to instantiate the model that was located above
+    try {
+        set model = $CLASSMETHOD(fqcn, "%New")
+    } catch %EasyCSPException {
+        throw %EasyCSPException // rethrow for the catch
+        set model = ""
+    }
+    
+    if $get(model)'["Models" {
+        throw ##class(EasyCSP.Core.Exception).%New("EasyCSP.Model.Factory", 500, className_" is not a data model.")
+    }
+    
+    /// The requested model must be an extent of model.Base
+    set supers = $listFromString(def.Super, ",")
+    if ($listFind(supers, "EasyCSP.Model.Base") = 0) & ($listFind(supers, "EasyCSP.MVModel.Base") = 0) {
+        throw ##class(EasyCSP.Core.Exception).%New("EasyCSP.Model.Factory", 500, className_" does not extend EasyCSP.Model.Base.")
+    }
+        
+    quit model
+]]></Implementation>
+</Method>
+</Class>
+</Export>

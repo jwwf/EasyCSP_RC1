@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:18">
+<Class name="EasyCSP.Model.Search">
+<Description><![CDATA[
+Methods to facilitate searches. Removed from the model base class to an abstract class to
+be available to other model types such as form or composite models.
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Abstract>1</Abstract>
+<TimeChanged>64143,44684.167191</TimeChanged>
+<TimeCreated>64118,55581.046526</TimeCreated>
+
+<Method name="backgroundQuery">
+<Description><![CDATA[
+This function runs a query in the background. The concept was lifted from Gio Ciampa's
+report generators. This allows long queries to run whilst making the progress during compilation
+available to AJAX queries from a web page. To make it much simpler to build HTML tables
+or grids on the fly, rows are stored as $LISTs in ^queryOut(<i>jobnumber</i>, "rows", <i>rownumber</i>).
+This makes it possible to make pageable grid displays. (See EasyCSP.CHTML.Table)]]></Description>
+<Final>1</Final>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>queryId</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set ^queryOut(queryId, "pid") = $j
+    set ^queryOut(queryId, "ppid") = $ZPARENT
+    
+    set columns = ^queryOut(queryId,"columns")
+    set attributeNames = ^queryOut(queryId, "attributes")
+    set labels = ^queryOut(queryId, "labels")
+    set numberOfColumns = $listLength(columns)
+    set sql = ^queryOut(queryId,"sql")
+    
+    set query = ##class(%SQL.Statement).%New()
+    set qStatus = query.%Prepare(sql)
+    
+    if qStatus '= 1 {
+        set ^queryOut(queryId,"status") = "Could not prepare SQL statement. Statement was:"_$MVVM_sql
+        quit ""
+    }
+    
+    set ^queryOut(queryId,"status") = "Executing"
+    set recordSet = query.%Execute()
+    
+    set ^queryOut(queryId, "code") = recordSet.%SQLCODE
+    set ^queryOut(queryId,"rowCount") = 0
+    
+    set ^queryOut(queryId,"status") = "Compiling"
+    while recordSet.%Next()
+    {
+        quit:$get(^queryOut(queryId,"uicommand"))="stop"
+        set mvRow = ""
+        set rowNumber = ^queryOut(queryId,"rowCount") + 1
+        set ^queryOut(queryId,"rowCount") = rowNumber
+        for idx = 1:1:numberOfColumns
+        {
+            set label = $listGet(labels, idx)
+            set ^queryOut(queryId,"rows",rowNumber, label) = recordSet.%GetData(idx)
+        }
+        
+    }
+    
+    set ^queryOut(queryId,"status") = "Complete"
+]]></Implementation>
+</Method>
+
+<Method name="findAllByAttributes">
+<Description>
+Find a set of records by attribute contents. Start by stuffing values to compare
+into the model attributes then call this method listing the attributes
+to use in the query. Attribute names are not case-sensitive. This function returns
+an integer that is either the Web.Application job number or the current thread job
+number if this is being run from a command line or a routine. The output is compiled
+in a work global ^queryOut. The ^queryOut global first subscript is the job number
+with several subscripts following: rowCount, status, columns, and query. The actual
+query is jobbed off to the background. Web pages should use a progress counter fired
+off by a periodic timer until the status of "Complete" is seen.</Description>
+<Final>1</Final>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+    do ..clearAll() ; ignore errors during search
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    if parameters.IsDefined("columnOrder") {
+        set columnOrder = parameters.get("columnOrder")
+    } else {
+        set columnOrder = ..getAttributeNames()
+    }
+    
+    set orderBy = parameters.get("orderBy")
+    set orderClause = ""
+    
+    set whereClause = ""
+    set attributeNames = ""
+    set columnNames = ""
+    set labels = ""
+    set top = +##class(EasyCSP.Configuration.Settings).getSetting("maxRecordsReturned")
+    set:top=0 top = 10000
+    
+    set tableName = ..SqlTableName
+    
+    // Last, if there is a user-written post-construct event to perform:
+    if ..hasMethod("beforeQuery") {
+        try {
+            d $METHOD($THIS,"beforeQuery")
+        } catch %EasyCSPException {
+        }
+    }
+    
+    quit:%EasyCSPException'="" ; $$$ERROR("Exception in beforeQuery")
+    
+    set loc = columnOrder.Next()
+    
+    while loc '= "" {
+        
+        set finder = columnOrder.get(loc)
+        
+        set atbDef = ..getAttribute(finder)
+        
+        if atbDef '= "" {
+            
+            if atbDef.order < 0 {
+                set loc = columnOrder.Next(loc)
+                continue
+            }
+            
+            if atbDef.value '= "" {
+                if (atbDef.name'=""),(atbDef.searchable) {
+                    set whereClause = whereClause _ $listBuild(atbDef.sqlFieldName _ "='"_atbDef.value_"'")
+                }
+            }
+            
+            if atbDef.sqlFieldName = "" {
+                set loc = columnOrder.Next(loc)
+                continue
+            }
+            
+            set:atbDef.order=0 idColumn = atbDef.sqlFieldName,idColumnLabel = atbDef.label
+            set attributeNames = attributeNames _ $listBuild(finder)
+            
+            if 'atbDef.hasConverter() {
+                set columnNames = columnNames _ $listBuild(atbDef.sqlFieldName)
+            } else {
+                set columnNames = columnNames _ $listBuild(##class(EasyCSP.SQL.Expression).run(atbDef))
+            }
+            
+            set labels = labels _ $listBuild(atbDef.label)
+        
+        } else {
+            do ..debugDump(finder_" is not a valid attribute finder-name.")
+        }
+        
+        set loc = columnOrder.Next(loc)
+    }
+    
+    if $listLength(columnNames) = 0 set columnNames = $listBuild("%VID,*")
+    
+    set uid = %EasyCSPApp.uid
+    set:uid="" uid="guest"
+    set remoteAddr = %EasyCSPApp.getCGI("REMOTE_ADDR")
+    set pid = uid_"*"_remoteAddr
+    
+    kill ^queryOut(pid) // remove previous query items
+    
+    set ^queryOut(pid, "attributes") = attributeNames
+    set ^queryOut(pid, "columns") = columnNames
+    set ^queryOut(pid, "controller") = %EasyCSPApp.controller.id
+    set ^queryOut(pid, "idColumn") = idColumn
+    set ^queryOut(pid, "idColumnLabel") = idColumnLabel
+    set ^queryOut(pid, "labels") = labels
+    set ^queryOut(pid, "tableName") = tableName
+        
+    set sql = "select top "_top_" "_$listToString(columnNames, ",")_" from "_tableName
+    
+    set:$listLength(whereClause)>0 sql = sql _ " where "_$listToString(whereClause," and ")
+    set:$get(orderBy) sql = sql _ " ORDER BY " _ orderBy
+    
+    set ^queryOut(pid, "sql") = sql
+    
+    // job off the query
+    job ##class(EasyCSP.Model.Base).backgroundQuery(pid)
+    quit pid
+]]></Implementation>
+</Method>
+</Class>
+</Export>

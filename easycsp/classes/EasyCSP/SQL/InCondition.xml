@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:24">
+<Class name="EasyCSP.SQL.InCondition">
+<Description><![CDATA[
+Define an "IN" condition for selection. This creates an IN (...) phrase
+in the query.
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>64142,39092.391907</TimeChanged>
+<TimeCreated>63763,33873.599054</TimeCreated>
+
+<Property name="column">
+<Type>%String</Type>
+</Property>
+
+<Property name="values">
+<Type>EasyCSP.Core.Array</Type>
+</Property>
+
+<Method name="%OnNew">
+<FormalSpec>column:%String="",values:EasyCSP.Core.Array=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    if $get(column) = "" {
+        throw ##class(EasyCSP.Core.Exception).%New("new sql condition",500,"","Specify a table column to compare.")
+    }
+    
+    if $get(values) = "" {
+        throw ##class(EasyCSP.Core.Exception).%New("new sql IN condition",500,"","Specify an array of values for the IN comparison.")
+    }
+    
+    if '..instanceOf(values, "Core.Array") {
+        throw ##class(EasyCSP.Core.Exception).%New("new sql condition",500,"","Values must be an EasyCSP.CoreArray of values.")
+    }
+    
+    if values.length() = 0 {
+        throw ##class(EasyCSP.Core.Exception).%New("new sql condition",500,"","Specify at least one value for the IN comparison.")
+    }
+    
+    set ..column = column
+    set ..values = values
+    
+    Quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

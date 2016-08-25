@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:36">
+<Class name="EasyCSP.Views.Users.View">
+<Description>
+Inspect an entire record</Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64112,41514.713315</TimeChanged>
+<TimeCreated>64090,36037.285103</TimeCreated>
+
+<Method name="run">
+<Implementation><![CDATA[
+    if '..data.isset("model") {
+        do ..SetCondition(404, "Please supply a data model for the login form.")
+        quit 0
+    }
+    
+    set model = ..data.get("model")
+    
+    set pk = model.PK
+    set keyValue = model.getAttributeValue(pk)
+    
+    set attributes = model.getAttributes()
+    
+    set htmlOptions = ##class(EasyCSP.Core.HashArray).%New()
+    do htmlOptions.set("class", "activeTable")
+    do ..openTag("table", htmlOptions)
+    
+    set keyAttribute = attributes.get(pk)
+    do ..addContent(..tag("caption", "", "User ID "_keyAttribute.value, 1))
+    
+    // table head
+    do ..openTag("thead")
+    do ..openTag("tr")
+    do ..addContent(..tag("th", "", "Field", 1))
+    do ..addContent(..tag("th", "", "Value", 1))
+    do ..closeTag("tr")
+    do ..closeTag("thead")
+    
+    do ..openTag("tbody")
+    
+    set columnOrder = model.columnOrder
+    set displayCounter = columnOrder.Next("")
+    while displayCounter '= "" {
+        set finder = columnOrder.get(displayCounter)
+        set attribute = attributes.get(finder)
+        if attribute.isPK {
+            set displayCounter = columnOrder.Next(displayCounter)
+            continue
+        }
+    
+    
+        do ..openTag("tr")
+        do ..addContent(..tag("td", "", attribute.label, 1))
+        do ..addContent(..tag("td", "", attribute.toDisplay(), 1))
+        do ..closeTag("tr")
+        
+        set displayCounter = columnOrder.Next(displayCounter)
+    }
+    
+    do ..closeTag("tbody")
+    
+    do ..closeTag("table")
+    
+    do htmlOptions.unsetAll()
+    do htmlOptions.set("style","float: right; width: 30%;")
+    do ..openTag("div", htmlOptions)
+    do ..addContent(..routeLink("Cancel and return to the user index","users/index"))
+    do ..closeTag("div")
+    
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:23">
+<Class name="EasyCSP.Rendering.CSV">
+<Description><![CDATA[
+Take data from ^queryOut(<i>user:IP</i>) and deliver it as a CSV file at the
+browser.]]></Description>
+<Super>EasyCSP.Views.Base</Super>
+<TimeChanged>64145,59639.929847</TimeChanged>
+<TimeCreated>64131,28247.606417</TimeCreated>
+
+<Method name="run">
+<Description>
+Take the output from an EasyCSP.SQL.Query and format it into a CSV
+stream. This stream can be directed to a browser as a downloadable
+file or the file could be saved on disk.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    set queryId = %EasyCSPApp.getRequestData("queryId")
+    if queryId = "" {
+        quit 1
+    }
+    
+    quit:$data(^queryOut(queryId))=0 1 // the query has already expired
+    
+    set headerRow = ##class(EasyCSP.Core.Array).%New()
+    do headerRow.split(^queryOut(queryId, "columnLabels"), $mvfm)
+    write headerRow.join(",", 1),!
+    
+    set numberOfColumns = headerRow.length()
+    
+    set limit = ^queryOut(queryId, "rowCount")
+    for idx = 1:1:limit {
+        set row = ##class(EasyCSP.Core.Array).%New()
+        for colNode = 1:1:numberOfColumns {
+            set nodeId = headerRow.get(colNode)
+            do row.append($get(^queryOut(queryId, "rows", idx, nodeId)))
+        }
+        do ..addContent(row.join(",", 1))
+    }
+    
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

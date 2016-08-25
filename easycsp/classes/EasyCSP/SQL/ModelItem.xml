@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:24">
+<Class name="EasyCSP.SQL.ModelItem">
+<Super>EasyCSP.Core.Component</Super>
+<TimeChanged>63771,28278.97749</TimeChanged>
+<TimeCreated>63762,58587.282661</TimeCreated>
+
+<Property name="attributes">
+<Type>%List</Type>
+</Property>
+
+<Property name="className">
+<Type>%String</Type>
+</Property>
+
+<Property name="columnLabels">
+<Type>%List</Type>
+</Property>
+
+<Property name="columnNames">
+<Type>%List</Type>
+</Property>
+
+<Property name="idColumn">
+<Type>%String</Type>
+</Property>
+
+<Property name="model">
+<Type>EasyCSP.Model.Base</Type>
+</Property>
+
+<Property name="tableName">
+<Type>%String</Type>
+</Property>
+
+<Method name="OnNew">
+<FormalSpec>model:EasyCSP.Model.Base=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	
+	quit:$get(model)="" $$$ERROR("Supply an instance of an active record model.")
+			
+	set ..className = model.%ClassName(1)
+	set sql = "select SqlSchemaName,SqlTableName from %Dictionary.CompiledClass where ID='"_..className_"'"
+	
+	set query = ##class(%SQL.Statement).%New()
+	set qStatus = query.%Prepare(sql)
+	
+	if qStatus '= 1 {
+		quit $$$ERROR("Could not prepare SQL statement. Statement was:"_$MVVM_sql)
+	}
+	
+	set recordSet = query.%Execute()
+	
+	while recordSet.%Next()
+	{
+		set ..tableName = recordSet.%Get("SqlSchemaName")_"."_recordSet.%Get("SqlTableName")
+		quit
+	}
+	
+	quit:..tableName="" $$$ERROR("Unable to resolve SQL table name. Does the model ultimately extend EasyCSP.Model.Base?")
+	
+	set modelAttributes = model.getAttributes()
+	set finder = ""
+	for {
+		set finder = $mvoconv(modelAttributes.Next("finder"), "MCL")
+		quit:finder=""
+		
+		set attribute = modelAttributes.GetAt(finder)
+		
+		set ..attributes = ..attributes _ $listBuild(finder)
+		set ..columnLabels = ..columnLabels _ $listBuild(attribute.label)
+		set ..columnNames = ..columnNames _ $listBuild(attribute.sqlFieldName)
+		
+		set:attribute.order=0 ..idColumn = attribute.sqlFieldName
+	}
+	
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

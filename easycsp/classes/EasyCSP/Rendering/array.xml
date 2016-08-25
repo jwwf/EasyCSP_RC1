@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:23">
+<Class name="EasyCSP.Rendering.array">
+<Description><![CDATA[
+Reformat EasyCSP array types for display. This is a quick and dirty
+class and there are a couple of small annoyances left in formatting
+deeply-nested objects correctly. 
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64148,28839.04495</TimeChanged>
+<TimeCreated>64145,74519.367327</TimeCreated>
+
+<Method name="toTable">
+<Description>
+Renders an HTML representation of nested Core Arrays or Core Hash Arrays.
+Pass in either a Core array or Core hasharray. HeadingDepth is used only
+on recursion.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>obj:EasyCSP.Core.HashArray="",valueInHex:%Boolean=0,headingDepth:%Integer=1</FormalSpec>
+<ReturnType>%GlobalCharacterStream</ReturnType>
+<Implementation><![CDATA[
+    quit:$get(obj)="" ""
+    
+    set valueInHex = +$get(valueInHex)
+    
+    set output = ##class(%GlobalCharacterStream).%New()
+    
+    // if it's a simple string make it just a single-node array value for now.
+    if '$isobject(obj) = "" {
+        do output.WriteLine("<table><tr><td>"_obj_"</td></tr></table>")
+        do output.Rewind()
+        quit output
+    }
+    
+    // Either a Cache list or an EasyCSP.Core.Array; both have the same internal structure.
+    if ($get(array) [ "EasyCSP.Core.Array") {
+    
+    do output.WriteLine("<table class=""activeTable"">")
+    set headingDepth = headingDepth + 1
+    
+        set node = obj.Next()
+        while node '= "" {
+            
+            do output.Write("<tr>")
+            
+            set value = obj.GetAt(node)
+            
+            if valueInHex {
+                set hex = "<br><pre>"_##class(EasyCSP.Conversions.HexDump).run(value)_"</pre>"
+            } else {
+                set hex = ""
+            }
+            
+            if $isobject(value) {
+            
+                do output.Write("<td>")
+                do output.CopyFrom(..toTable(value, valueInHex, headingDepth))
+                do output.Write("</td>")
+                
+            } else {
+                do output.WriteLine("<td>"_value_hex_"</td>")
+            }
+            
+            do output.Write("</tr>")
+            
+            set node = obj.Next(node)
+        }
+        
+        do output.Write("</table>")
+    set headingDepth = headingDepth - 1
+        
+    }
+    
+    // Either a Cache array-collection or an EasyCSP.Core.HashArray; both have the same internal structure.
+    if ($get(obj) [ "EasyCSP.Core.HashArray") {
+        
+        // Make a row of column names
+        
+        do output.WriteLine("<table class=""activeTable"">")
+        //do output.WriteLine("<tr>")
+        
+        set hasError = 0
+        try {
+            set keys = obj.keysAsArray()
+        } catch nothing {
+            set hasError = 1
+        }
+        
+        quit:hasError output
+    set headingDepth = headingDepth + 1
+        
+        // Now process each node as values
+        set node = obj.Next()
+        while node '= "" {
+            
+            set value = obj.get(node)
+            if ($get(value) [ "Core.Array") ! ($get(value) [ "Core.HashArray") {
+                do output.WriteLine("<h"_headingDepth_">"_node_"</h"_headingDepth_">")
+                do output.CopyFrom(..toTable(value, valueInHex, headingDepth))
+                set node = obj.Next(node)
+                continue
+            }
+            
+            if valueInHex {
+                set hex = "<br><pre>"_##class(EasyCSP.Conversions.HexDump).run(value)_"</pre>"
+            } else {
+                set hex = ""
+            }
+            
+            do output.WriteLine("<tr>")
+            do output.WriteLine("<td width=""20%"">"_##class(EasyCSP.Conversions.ColumnToLabel).run(node)_" ("_node_") "_"</td>"_"<td>"_value_hex_"</td>")
+            do output.WriteLine("</tr>")
+                
+            set node = obj.Next(node)
+        }
+        
+        do output.WriteLine("</table>")
+    set headingDepth = headingDepth - 1
+    }
+    
+    do output.Rewind()
+    quit output
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:55">
+<Class name="EasyCSP.Activities.Default.UserMaintenance">
+<Description><![CDATA[
+Uses models from Models.Users and Models.Shadow to create a single input form. The
+difference between a form and a record model is that a record model corresponds field-for-field,
+property-for-property with a single %Persistent class. A form leverages most of the same sorts
+of behavior as a single-record model but does not extend %Persistent.
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Apps.Base</Super>
+<TimeChanged>64152,52183.67092</TimeChanged>
+<TimeCreated>64111,67986.17003</TimeCreated>
+
+<Method name="recordModels">
+<Description>
+The forms model superclass allows record models to be added immediately
+during its "OnNew" construct phase. Record models can be added at any 
+time but this allows for some neat organization. </Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    do ..addModel("Users")
+    do ..addModel("UserShadow")
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="chgPass">
+<Description>
+Change a user's password. A user can not log in until that account is
+set to ACTIVE and a password is set. Passwords are encrypted against
+the system salt. One EasyCSP is set up, do not ever change the system
+salt, otherwise no one will be able to log in</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set id = parameters.get("id")
+    
+    // This must be set up by the controller. The business/access rule resides there.
+    do ..findAllByPK(id)
+    
+        do %EasyCSPApp.controller.debugInfo.WriteLine("<pre>"_$classname()_", in chgPass, id is '"_id_"'</pre>")
+        do %EasyCSPApp.controller.debugInfo.CopyFrom(..captureObjDump(..models.get("users")))
+        do %EasyCSPApp.controller.debugInfo.CopyFrom(..captureObjDump(..models.get("usersshadow")))
+        
+    set users = ..models.get("users")
+    set userShadow = ..models.get("usershadow")
+    
+    set attributeSetup = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // Set up a fake attribute for the repeat-password input on the form. It
+    // won't matter that the attribute doesn't exist in the MVFile/SQl projection.
+    // Since the attribute is not associated with a %Persistent class property,
+    // it will be skipped on save.
+    do attributeSetup.set("label", "Enter password again")
+    do attributeSetup.set("name", "usershadow_cpassword")
+    do attributeSetup.set("tooltip", "Type the same password again. The form will not submit until the passwords match exactly.")
+    do attributeSetup.set("type", "password")
+    do attributeSetup.set("width", 25)
+
+    do userShadow.addAttribute(attributeSetup)
+    
+    // Store the model back for the succeding steps.
+    do ..models.set("usershadow", userShadow)
+    
+    // Hide all the attributes. A change password page only needs username, password, and a compare-password.
+    // Those live in different files/tables/models.
+    set nextModel = ..models.Next()
+    while nextModel '= "" {
+    
+        set model = ..models.get(nextModel)
+        set finders = model.getAttributeFinders()
+        
+        set idx = finders.Next()
+        while idx '= "" {
+            set finder = finders.get(idx)
+            
+            if (finder'="users_username")&(finder'="usershadow_password")&(finder'="usershadow_cpassword") {
+                do model.setTrait(finder, "nodisplay", 1)
+            } else {
+                do model.unsetTrait(finder, "nodisplay")
+            }
+            
+            set idx = finders.Next(idx)
+        }
+        
+        do ..models.set(nextModel, model)
+        
+        set nextModel = ..models.Next(nextModel)
+    }
+    
+    do ..columnOrder.split("users_username,usershadow_password,usershadow_cpassword")
+    
+    if %EasyCSPApp.cgiData.get("REQUEST_METHOD") = "GET" {
+        quit ..changePassGET(parameters)
+    }
+    
+    set usershadowPassword = %EasyCSPApp.getRequestData("usershadow_password")
+    set comparePassword =%EasyCSPApp.getRequestData("usershadow_cpassword")
+    
+    if (usershadowPassword = "") ! (comparePassword = "") {
+        do ..addError("usershadow_password", "Passwords can not be blank.")
+        quit 0
+    }
+    
+    if (usershadowPassword '= comparePassword) {
+        do ..addError("usershadow_password", "Passwords must match.")
+        quit 0
+    }
+    
+    set usershadowPassword = ##class(EasyCSP.Core.Encryption).encrypt(usershadowPassword,##class(EasyCSP.Configuration.Settings).getSetting("systemSalt"))
+    
+    set userShadow = ..models.get("usershadow")
+    do userShadow.setAttributeValue("usershadow_password", usershadowPassword)
+    quit userShadow.save()
+]]></Implementation>
+</Method>
+
+<Method name="changePassGET">
+<Description>
+Make code a little easier to follow by splitting the GET and POST
+phases of chgPass out of the mainline.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    
+    
+    // Tell JQuery validation that the password and repeat-password have
+    // to match before the form can be submitted.
+    set js = "$(""#defaultForm"").validate({" _ ..crlf _
+    "    rules: {" _ ..crlf _
+    "        usershadow_password: ""required""," _ ..crlf _
+    "        usershadow_cpassword: {" _ ..crlf _
+    "        equalTo: ""#usershadow_password""" _ ..crlf _
+    "        }" _ ..crlf _
+    "    }" _ ..crlf _
+    "});"
+    
+    // Add the script to the pass-parameters so the layout can add it to the page.
+    set scripting = ##class(EasyCSP.Web.Client.Scripts).%New()
+    do scripting.registerScript("compare_chgpass", js, ##class(EasyCSP.Web.Client.Scripts).%GetParameter("posEnd"), 1)
+    do parameters.set("scripting", scripting)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="register">
+<Description>
+Register a new user.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set id = parameters.get("id")
+    set:id="" id = %EasyCSPApp.requestData.get("id")
+    
+    // If the logged-in user is not an administrator, they can only see their own
+    // user/user shadow records.
+    if '%EasyCSPApp.controller.isSuperUser {
+        set id = %EasyCSPApp.getSessionData("uid") ; force it to fit
+    }
+    
+    set cpassword = %EasyCSPApp.requestData.get("cpassword")
+    set usershadowPassword = %EasyCSPApp.requestData.get("usershadow_password")
+    if cpassword '= usershadowPassword {
+        do ..addError("usershadow_password", "Passwords do not match.")
+        quit 0
+    }
+    
+    if %EasyCSPApp.cgiData.get("REQUEST_METHOD") = "POST" {
+        do ..loadFromArray(%EasyCSPApp.requestData)
+        quit:'..validate() 0 // error messages will be in the model
+    
+        if id '= "" {
+            set users = ##class(EasyCSP.Models.Users).findByIdentifier(id)
+            if $get(users)="" {
+                set:users="" users = %EasyCSPApp.requestData.get("users_emailaddress")
+                if $get(users) {
+                    do ..SetCondition("Sorry, at least one of the account identifiers is in use. Please choose another.")
+                    quit 0
+                }
+            }
+        }
+    }
+    
+    //do ..addAttribute("name:cpassword","width:25","type:password", "label:Enter the password again", "required:1")
+
+    do:%EasyCSPDebugging=1 %EasyCSPApp.controller.debugInfo.CopyFrom(..debugDump($this))
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="update">
+<Description>
+Update a user's access information. Two MV files are used: users and user shadow.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    if $get(parameters) = "" throw ##class(EasyCSP.Core.Exception).%New(..%ClassName(1), "UPD1", $STACK($STACK(-1),"LOCATION"), "Update was called with no parameters")
+    
+    set id = parameters.get("id")
+        
+    do ..findAllByPK(id) ; obtain new, empty models for Users and UserShadow
+   
+    if %EasyCSPApp.cgiData.get("REQUEST_METHOD") = "GET" {
+        set atbnames = ##class(EasyCSP.Core.Array).%New()
+        do atbnames.split("users_creation_date,users_creationdate,users_lastupdatedate,usershadow_usershadowid,usershadow_activationkey,usershadow_lastgoodlogindate,usershadow_lastfailedlogindate,usershadow_attemptssincelastgoodlogin,usershadow_softsuspenduntildate,usershadow_currentsessionid,usershadow_privatekey")
+        
+        set nextAtb = atbnames.Next()
+        while nextAtb '= "" {
+            do ..setTrait(atbnames.get(nextAtb), "nodisplay", 1)
+            set nextAtb = atbnames.Next(nextAtb)
+        }
+        
+        set ..columnOrder = ##class(EasyCSP.Core.Array).%New()
+        do ..columnOrder.split("users_username,users_firstname,users_surname,users_emailaddress, users_groupid, usershadow_status")
+        
+        // use a double-pane select for groups.
+        do ..setTrait("users_groupId", "multiselect", 1)
+        
+        quit 1
+    }
+    
+    set users = ..models.get("users")
+    
+    if users.scenario '= "old" { // no user by that id exists
+        do ..addError("username", "No user with that ID exists. Click Cancel to return to the index.") // prevent someone screwing around with URLs
+        quit 0
+    } else {
+    
+        do ..loadFromArray(%EasyCSPApp.requestData)
+        quit:..hasErrors() 0 ; tell the controller to redisplay the form if there were errors in the input
+        quit ..save()
+    }
+    
+    quit 0
+]]></Implementation>
+</Method>
+</Class>
+</Export>

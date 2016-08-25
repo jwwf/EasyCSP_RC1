@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:59">
+<Class name="EasyCSP.Controller.Controllers.Queryresult">
+<Description>
+A common class for display query results.</Description>
+<Super>EasyCSP.Controller.Base</Super>
+<TimeChanged>64145,27212.985324</TimeChanged>
+<TimeCreated>64102,42121.526826</TimeCreated>
+
+<Method name="accessRules">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // allow any user access to help screens, the forgot password screen, the reset password screen,
+    // the error display page, and the signon dialogue.
+    do ..addAccessRule("navigation,statushtml,statusjson,stop,table,CSV", "*", "*")    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="beforeCSV">
+<Description>
+Output content type and disposition headers so the Save/Open dialog
+box opens on the browser.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set filename = parameters.get("downloadName")
+    if filename = "" {
+        set filename = %EasyCSPApp.getRequestData("downloadName")
+    } else {
+        set filename = "result.csv"
+    }
+    
+    do %response.SetHeader("content-type", "text/csv")
+    do %response.SetHeader("content-disposition", "attachment; filename="""_filename_"""")
+    do %response.SetHeader("pragma", "no-cache")
+    do %response.SetHeader("cache-control", "no-cache")
+    do %response.SetHeader("expires", "-1")
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionCSV">
+<Description>
+Send the CSV file to the browser.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set csv = ##class(EasyCSP.Rendering.CSV).%New()
+    set sc = csv.run(parameters)
+    quit:sc=0 ""
+    
+    set stream = csv.render()
+    while stream.AtEnd = 0 {
+        write stream.ReadLine(),!
+    }
+    
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeNavigation">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set ..isAjax = 1
+    do %response.SetHeader("content-type", "text/html")
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionNavigation">
+<Description>
+To process a get-navigation request. The contents of the navigation div
+built in the Index() action's "buildAll()" call are replaced by the 
+result of this call.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set ActiveTable = ##class(EasyCSP.Web.Widget.ActiveTable).%New()
+    do ..renderWidget("ActiveTable", "navigationHTML", parameters)
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="beforeStatushtml">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set ..isAjax = 1
+    do %response.SetHeader("content-type", "text/html")
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionStatushtml">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    set pageNumber = %EasyCSPApp.getRequestData("pageNumber")
+    set:pageNumber="" pageNumber = 1
+    do ..renderWidget("ActiveTable", "statusHTML", parameters)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeStatusjson">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set ..isAjax = 1
+    do %response.SetHeader("content-type", "application/json")
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionStatusjson">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    do ..renderWidget("ActiveTable", "statusJSON", parameters)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeStop">
+<Description>
+Stop a query that's still running</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set ..isAjax = 1
+    do %response.SetHeader("content-type", "text/plain")
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionStop">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set queryId = %EasyCSPApp.getCGI("queryId")
+    set:(^queryOut(queryId,"status")'=""&^queryOut(queryId,"status")'="Complete") ^queryOut(queryId, "uicommand") = "stop"
+    write "Stopped",!
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="beforeTable">
+<Description>
+Render a table using the queryId as a key in the ^queryOut output cache.
+After the headers have been output, the controller.run() function
+starts building page content. This action does not use layouts. It
+answers directly to an ajax request ergo "write" instead of
+adding stream content is used.</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set ..isAjax = 1
+    do %response.SetHeader("content-type", "text/html")
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="actionTable">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+        
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+
+    // To process a table-fetch request. This only returns the HTML that
+    // goes in the {queryId}_activetable_div. This div is created on the
+    // initial build-all request in the Index() action.
+    
+    set queryId = parameters.get("queryId")
+    set:queryId="" queryId = %EasyCSPApp.getRequestData("queryId")
+    if queryId = "" {
+        write $classname(0)_": What query?"
+        quit 1
+    }
+    
+    do:+$get(%EasyCSPDebugging)=1 %EasyCSPApp.controller.renderedPage.CopyFrom(..debugDump(parameters))
+
+    // This query is to get the basic querying mechanism working. In the release version
+    // it should be replaced with a query that joins USERS and USER.SHADOW and is aware
+    // of business-rule restrictions.
+    do parameters.set("ajaxAction", ..action)
+    do ..renderWidget("ActiveTable", "tablehtml", parameters)
+        
+    quit 1
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:24">
+<Class name="EasyCSP.SQL.Expression">
+<Description><![CDATA[
+<p>
+Write a (possibly-nested) column expression that will run an EasyCSP converter against
+a column value. Pass in a model attribute definition. The builder will use the information
+in the attribute definition to build a column expression. 
+</p>
+<p>
+For instance, if a columns is
+stored in *nix epoch time, add a "UDate" converter to the attribute definition before
+calling {model}.findByAllAttributes (or other model search method). Before a query is
+run, an attribute is tested to determine whether it has converters assigned to it. If
+so then the query method should call this method to enable SQL to leverage Cache conversion
+classes. This function leverages the EasyCSP object factory to locate a converter
+so local custom converter plugins will be called in place of any stock-standard
+function. 
+</p>
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>%RegisteredObject</Super>
+<TimeChanged>64144,64489.066958</TimeChanged>
+<TimeCreated>64095,36318.425411</TimeCreated>
+
+<Method name="run">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>attribute:EasyCSP.Model.attribute</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if $get(attribute) '[ "attribute" quit ""
+    if 'attribute.hasConverter() quit attribute.sqlFieldName
+    
+    // Get the list of converters to be run
+    set converters = attribute.converters
+    set expression = ""
+    set sqlFieldName = attribute.sqlFieldName
+    
+    set key = converters.Next()
+    
+    // if there are no expressions then return the SQL column name
+    quit:key="" sqlFieldName
+    
+    set parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    // otherwise begin building an expression
+    while key '= "" {
+        set converter = converters.get(key)
+        if expression = "" {
+            set expression = "EasyCSP_Converter.SqlBridge_run('" _ converter _ "'," _ attribute.sqlFieldName _ ")"
+        } else {
+            set expression = "EasyCSP_Converter.SqlBridge_run('" _ converter _ "'," _ expression _ ")"
+        }
+        set key = converters.Next(key)
+    }
+    
+    quit expression
+]]></Implementation>
+</Method>
+</Class>
+</Export>

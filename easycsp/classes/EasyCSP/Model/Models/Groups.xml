@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:17">
+<Class name="EasyCSP.Model.Models.Groups">
+<Description>
+Contracted customers, for example Las Vegas, Frederick County, etc</Description>
+<Super>%Persistent,EasyCSP.Model.MVBase</Super>
+<TimeChanged>64142,70525.25701</TimeChanged>
+<TimeCreated>64107,79764.612023</TimeCreated>
+
+<Index name="indexgroupId">
+<IdKey>1</IdKey>
+<PrimaryKey>1</PrimaryKey>
+<Properties>groupId</Properties>
+</Index>
+
+<Index name="indexcity">
+<Data>city</Data>
+<Properties>city</Properties>
+</Index>
+
+<Index name="indexcountry">
+<Data>country</Data>
+<Properties>country</Properties>
+</Index>
+
+<Index name="indexstate">
+<Data>state</Data>
+<Properties>state</Properties>
+</Index>
+
+<Index name="indexGroupName">
+<Data>groupName</Data>
+<Properties>groupName</Properties>
+</Index>
+
+<Parameter name="MVFILENAME">
+<Default>GROUPS</Default>
+</Parameter>
+
+<Parameter name="MVGLOBAL">
+<Type>%String</Type>
+<Default>^GROUPS</Default>
+</Parameter>
+
+<Parameter name="MVAUTOLOCK">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCLEARDICT">
+<Default>0</Default>
+</Parameter>
+
+<Parameter name="MVCREATE">
+<Type>BOOLEAN</Type>
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="MVREPOPULATE">
+<Default>1</Default>
+</Parameter>
+
+<Property name="groupId">
+<Description>
+The item ID</Description>
+<Type>%String</Type>
+<Required>1</Required>
+<Parameter name="MVATTRIBUTE" value="0"/>
+<Parameter name="MVHEADING" value="Group Identifier"/>
+<Parameter name="MVNAME" value="GROUP_ID"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="25"/>
+</Property>
+
+<Property name="groupName">
+<Description>
+The name of the group, company, or group</Description>
+<Type>%String</Type>
+<Required>1</Required>
+<SqlFieldName>group_name</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="1"/>
+<Parameter name="MVHEADING" value="Group Name"/>
+<Parameter name="MVNAME" value="NAME"/>
+<Parameter name="MVWIDTH" value="25"/>
+</Property>
+
+<Property name="streetAddress">
+<Description>
+The street address.</Description>
+<Type>%String</Type>
+<Collection>list</Collection>
+<SqlFieldName>street_address</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="2"/>
+<Parameter name="MVHEADING" value="Address"/>
+<Parameter name="MVNAME" value="ADDRESS"/>
+<Parameter name="MVWIDTH" value="40"/>
+</Property>
+
+<Property name="city">
+<Description>
+City name</Description>
+<Type>%String</Type>
+<SqlFieldName>city</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="3"/>
+<Parameter name="MVHEADING" value="City"/>
+<Parameter name="MVNAME" value="CITY"/>
+<Parameter name="MVWIDTH" value="40"/>
+</Property>
+
+<Property name="state">
+<Description>
+State or province - two-letter abbreviation</Description>
+<Type>%String</Type>
+<SqlFieldName>state</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="4"/>
+<Parameter name="MVHEADING" value="ST/PR"/>
+<Parameter name="MVNAME" value="STATE"/>
+<Parameter name="MVWIDTH" value="2"/>
+</Property>
+
+<Property name="postCode">
+<Description>
+Zip or post code</Description>
+<Type>%String</Type>
+<SqlFieldName>post_code</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="5"/>
+<Parameter name="MVHEADING" value="Post Code"/>
+<Parameter name="MVNAME" value="POST_CODE"/>
+<Parameter name="MVWIDTH" value="10"/>
+</Property>
+
+<Property name="country">
+<Description>
+Country</Description>
+<Type>%String</Type>
+<SqlFieldName>country</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="6"/>
+<Parameter name="MVHEADING" value="Country"/>
+<Parameter name="MVNAME" value="COUNTRY"/>
+<Parameter name="MVWIDTH" value="3"/>
+</Property>
+
+<Property name="telephone">
+<Description>
+Telephone number (no punctuation)</Description>
+<Type>%String</Type>
+<Collection>list</Collection>
+<SqlFieldName>telephone</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="7"/>
+<Parameter name="MVHEADING" value="Telephone"/>
+<Parameter name="MVNAME" value="TELEPHONE"/>
+<Parameter name="MVWIDTH" value="20"/>
+</Property>
+
+<Property name="isActive">
+<Description>
+Is active: set this to 0 to deactivate the group. Note: that may affect an entire class of users</Description>
+<Type>%Boolean</Type>
+<SqlFieldName>is_active</SqlFieldName>
+<Parameter name="MVATTRIBUTE" value="8"/>
+<Parameter name="MVHEADING" value="Active"/>
+<Parameter name="MVNAME" value="IS_ACTIVE"/>
+<Parameter name="MVPROJECTED" value="1"/>
+<Parameter name="MVWIDTH" value="1"/>
+</Property>
+
+<Method name="beforeSave">
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    if +..getAttributeValue("isactive") '= 1 do ..setAttributeValue("isactive", 0)
+    quit 1
+]]></Implementation>
+</Method>
+
+<Method name="allActiveGroups">
+<ClassMethod>1</ClassMethod>
+<ReturnType>EasyCSP.Core.HashArray</ReturnType>
+<Implementation><![CDATA[
+    set sql = "SELECT groupId,group_name FROM "_..getSQLTableName()_" WHERE is_active = 1"
+    set query = ##class(%SQL.Statement).%New()
+    set qStatus = query.%Prepare(sql)
+    
+    if qStatus '= 1 {
+        quit ""
+    }
+    
+    set recordSet = query.%Execute()
+    set rtn = ##class(EasyCSP.Core.HashArray).%New()
+    
+    while recordSet.%Next()
+    {
+        do rtn.set(recordSet.%Get("groupId"), recordSet.%Get("group_name"))
+    }
+    
+    quit rtn
+]]></Implementation>
+</Method>
+
+<Method name="search">
+<Description>
+Override the default (non-functioning) search() method. Each model should set the rules
+for who can access what in the database.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    do parameters.set("model", "Groups")
+    set query = ##class(EasyCSP.SQL.Query).%New(parameters)
+    do query.run()
+    quit query.id
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^GROUPS</DataLocation>
+<DefaultData>GroupsDefaultData</DefaultData>
+<IdLocation>^C.GROUPS</IdLocation>
+<IndexLocation>^I.GROUPS</IndexLocation>
+<StreamLocation>^S.GROUPS</StreamLocation>
+<Data name="GroupsDefaultData">
+<Value name="1">
+<Value>groupName</Value>
+</Value>
+<Value name="2">
+<Value>streetAddress</Value>
+</Value>
+<Value name="3">
+<Value>city</Value>
+</Value>
+<Value name="4">
+<Value>state</Value>
+</Value>
+<Value name="5">
+<Value>postCode</Value>
+</Value>
+<Value name="6">
+<Value>country</Value>
+</Value>
+<Value name="7">
+<Value>telephone</Value>
+</Value>
+<Value name="8">
+<Value>isActive</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+</Export>

@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:24:59">
+<Class name="EasyCSP.Controller.Controllers.Settings">
+<Description><![CDATA[
+Starting set of actions. This is the page controller called if the route is empty 
+(meaning the top of the site). Login and redirection after logout are also handled here.
+
+  <p>Copyright (c) 2011 James W "Bill" Westley-Farrell</p>
+
+  <p>Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at</p>
+
+      <p><a href=http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+
+  <p>Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.</p>]]></Description>
+<Super>EasyCSP.Controller.Base</Super>
+<TimeChanged>64152,53068.663612</TimeChanged>
+<TimeCreated>64099,50169.918452</TimeCreated>
+
+<Method name="accessRules">
+<Description>
+
+The accessRules method, if it exists, will be called automatically by the controller
+base class to add access rules to the controller's environment. Specify the actions
+as a comma-separated string of simple action names.</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    do ..addAccessRule("create,delete,index,update,view", "@", "administrators")
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="actionCreate">
+<Description>
+Update a system setting</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set model = ##class(EasyCSP.Configuration.Settings).%New()
+    if '..instanceOf( model, "Settings") {
+        throw ##class(EasyCSP.Core.Exception).%New("Create",404,"","Can not obtain an instance of model Configuration.Settings")
+        quit 0
+    }
+    
+    set id = %EasyCSPApp.requestData.get("id")
+    do parameters.set("id", id)
+    
+    do:id'="" model.read(id)
+    
+    if %EasyCSPApp.cgiData.get("REQUEST_METHOD") = "POST" {
+        
+        if model.getIsNewRecord() = 0 { // a setting by that id already exists; use Update instead
+            do model.addError("settingkey", "A setting with that name already exists. Click Cancel to return to the index.")
+            set isValid = 0
+        }
+        
+        // Change eol characters to @am's. Text areas may separate lines with cr, lf, or crlf.
+        // This filters out blank lines by trimming repeated @am's. The @am's will be converted
+        // to @vm's when the attribute is serialized for Cache MV storage.
+        do %EasyCSPApp.requestData.set("settings_affectedgroup", ..eolToAM(%EasyCSPApp.requestData.get("settings_affectedgroup")))
+        do %EasyCSPApp.requestData.set("settings_affecteduser", ..eolToAM(%EasyCSPApp.requestData.get("settings_affecteduser")))
+        
+        do model.loadFromArray(%EasyCSPApp.requestData)
+        
+        do:'model.hasErrors() model.save()
+        quit:'model.hasErrors() ..actionIndex(parameters)
+        
+    }
+    
+    set models = ##class(EasyCSP.Core.HashArray).%New()
+    do models.set("settings", model)
+    do parameters.set("model", model) ; supply a form template model
+    do parameters.set("models", models) ; and a model for the data
+    do parameters.set("presentation", "create")
+    
+    quit ..render("Form", parameters)
+]]></Implementation>
+</Method>
+
+<Method name="actionDelete">
+<Description>
+Update a system setting</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set model = ##class(EasyCSP.Configuration.Settings).%New()
+    if '..instanceOf( model, "Settings") {
+        throw ##class(EasyCSP.Core.Exception).%New("Create",404,"","Can not obtain an instance of model Configuration.Settings")
+        quit 0
+    }
+    
+    set id = %EasyCSPApp.requestData.get("id")
+    do model.read(id)
+        
+    do:'model.getIsNewRecord() model.delete()
+    if model.hasErrors() {
+        do ..SetCondition("del20", "Unable to delete setting record id "_model.recordId)
+        quit ..render("Site/Error")
+    }
+        
+    do parameters.unset("queryId")
+    do parameters.unset("id")
+    
+    quit ..actionIndex(parameters)
+]]></Implementation>
+</Method>
+
+<Method name="actionIndex">
+<Description>
+Display the settings table index page</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    
+    set model = ##class(EasyCSP.Configuration.Settings).%New()
+    
+    set queryId = %EasyCSPApp.getRequestData("queryId")
+    do parameters.set("model", model)
+    do parameters.set("queryId", queryId)
+    set columnOrder = ##class(EasyCSP.Core.Array).%New()
+    do columnOrder.split("settings_settingkey,settings_description,settings_value,settings_affecteduser,settings_affectedgroup")
+    do parameters.set("columnOrder", columnOrder)
+    
+    set queryId = $classmethod(model.%ClassName(1), "search", parameters)
+    
+    do parameters.set("model", model)
+    do parameters.unset("noCreate")
+
+    do parameters.set("queryId", queryId)
+    do parameters.set(%EasyCSPApp.getRequestData("pageNumber"))
+    do parameters.set(%EasyCSPApp.getRequestData("pageSize"))
+    
+    quit ..render("QueryResult", parameters)
+]]></Implementation>
+</Method>
+
+<Method name="actionUpdate">
+<Description>
+Update a system setting</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    
+    set model = ##class(EasyCSP.Configuration.Settings).%New()
+    if '..instanceOf( model, "Settings") {
+        throw ##class(EasyCSP.Core.Exception).%New("Create",404,"","Can not obtain an instance of model Configuration.Settings")
+        quit 0
+    }
+    
+    set id = %EasyCSPApp.requestData.get("id")
+    do parameters.set("id", id)
+    
+    do model.read(id)
+    
+    if %EasyCSPApp.cgiData.get("REQUEST_METHOD") = "POST" {
+        
+        if model.getIsNewRecord() = 1 { // no setting by that id exists; can't save without an ID
+            do model.addError("settingkey", "No setting with that name exists. Click Cancel to return to the index.") // prevent someone screwing around with URLs
+            set isValid = 0
+        }
+        
+        // Change eol characters to @am's. Text areas may separate lines with cr, lf, or crlf.
+        // This filters out blank lines by trimming repeated @am's. The @am's will be converted
+        // to @vm's when the attribute is serialized for Cache MV storage.
+        do %EasyCSPApp.requestData.set("settings_affectedgroup", ..eolToAM(%EasyCSPApp.requestData.get("settings_affectedgroup")))
+        do %EasyCSPApp.requestData.set("settings_affecteduser", ..eolToAM(%EasyCSPApp.requestData.get("settings_affecteduser")))
+        
+        /*
+        do ..debugInfo.WriteLine("<pre>")
+        do ..debugInfo.CopyFrom(##class(EasyCSP.Rendering.array).toTable(%EasyCSPApp.requestData))
+        do ..debugInfo.WriteLine("</pre>")
+        */
+        
+        do model.loadFromArray(%EasyCSPApp.requestData)
+        
+        do:'model.hasErrors() model.save()
+        quit:'model.hasErrors() ..actionIndex(parameters)
+        
+    }
+    
+    set models = ##class(EasyCSP.Core.HashArray).%New()
+    do models.set("settings", model)
+    do parameters.set("model", model) ; supply a form template model
+    do parameters.set("models", models) ; and a model for the data
+    do parameters.set("presentation", "update")
+    
+    quit ..render("Form", parameters)
+]]></Implementation>
+</Method>
+
+<Method name="actionView">
+<Description>
+Update a user in the system</Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    set model = ##class(EasyCSP.Configuration.Settings).%New()
+    if '..instanceOf( model, "Settings") {
+        throw ##class(EasyCSP.Core.Exception).%New("Create",404,"","Can not obtain an instance of model Configuration.Settings")
+        quit 0
+    }
+    
+    // Which user record is to be updated?
+    set id = parameters.get("id")
+    set:id="" id = %EasyCSPApp.getRequestData("id")
+    
+    // Retrieve that one
+    do model.read(id)
+    
+    // Pass data to a view through a Framework parameter structure.
+    do parameters.set("model", model)
+    do parameters.set("pageTitle", "Setting record "_id)
+    
+    // ... and render the view in its layout
+    quit ..render("RecordView", parameters)
+]]></Implementation>
+</Method>
+</Class>
+</Export>
