@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 19:30:11">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 10:53:49">
 <Class name="EasyCSP.SourceControl.Base">
 <Description>
 Common functions and properties
 EasyCSP.Core.Component,</Description>
 <Abstract>1</Abstract>
 <Super>%Studio.Extension.Base</Super>
-<TimeChanged>64155,70209.114414</TimeChanged>
+<TimeChanged>64156,39076.39314</TimeChanged>
 <TimeCreated>64150,82406.78222</TimeCreated>
 
 <Property name="currentProject">
@@ -54,6 +54,15 @@ This is set to TRUE when the developer clicks "Make Stand-up Image". This flag m
 classes and globals to add "standup/mm-dd-yyyy-hh:mm:ss" as destination subfolders under the namespace
 folder on disk. This allows snapshotting of a particular namespace code and data image to make it easier
 to stand up the same namespace on another machine.</Description>
+<Type>%Boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="repoChanged">
+<Description>
+Set this to true any time something is exported out to the repo directory.
+This is used to enable and disable certain menu commands. For version 0.0
+of this class, this flag isn't entirely reliable yet.</Description>
 <Type>%Boolean</Type>
 <InitialExpression>0</InitialExpression>
 </Property>
@@ -115,6 +124,8 @@ Using the MVBasic OPENPATH command, check the existence of an OS path (Windows o
     
     do sourceControl.setAttributeValue("adddate", ..getUniversalTime())
     do sourceControl.save()
+    
+    set ..repoChanged = 1
         
     quit sc
 ]]></Implementation>
@@ -184,6 +195,8 @@ Copy CSP items from the Cache service directory to the source control
     
     "EasyCSP.Model.Models.SourceControl"->addCSPFiles()
     
+    @ME->repoChanged = 1
+    
     return 1
 ]]></Implementation>
 </Method>
@@ -229,6 +242,8 @@ related globals and subtables will be included in the dump.</Description>
             write $SYSTEM.Status.GetErrorText(sc),!
             write !,"Could not make a backup file. Correct the error-causing condition ",!
             Write "and try again. No globals have been changed."
+        } else {
+            set ..repoChanged = 1
         }
     }
     
