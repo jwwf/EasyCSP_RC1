@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 08:23:13">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 08:39:01">
 <Class name="EasyCSP.SourceControl.Git">
 <Description>
 Interface with GIT for source control. This class is NOT ready for
 production; it's just the start of the Git interface class.</Description>
 <Super>EasyCSP.SourceControl.Base</Super>
-<TimeChanged>64156,30187.878903</TimeChanged>
+<TimeChanged>64156,31139.740561</TimeChanged>
 <TimeCreated>64150,27632.264311</TimeCreated>
 
 <Method name="OnMenuItem">
@@ -222,7 +222,7 @@ Issue a git commit command in the source control directory.</Description>
     * Commit changes to local the repo. This updates .git data and prepares
     * for a git push.
     gitRepo = "EasyCSP.Configuration.Settings"->getSetting("gitRepo")
-    cmd = "cd " : @ME->RepoCloneDirectory : ";git commit -m " : dquote(@ME->getUniversalTime())
+    cmd = "cd " : @ME->RepoCloneDirectory : ";git add . -A; git commit --all -m " : dquote(@ME->getUniversalTime())
     crt "Begin commit with " : cmd
     pcperform cmd capturing reply
     crt ereplace(reply, @fm, char(13):char(10))
