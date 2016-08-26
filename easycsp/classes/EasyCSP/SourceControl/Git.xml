@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 09:10:35">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 10:26:01">
 <Class name="EasyCSP.SourceControl.Git">
 <Description>
 Interface with GIT for source control. This class is NOT ready for
 production; it's just the start of the Git interface class.</Description>
 <Super>EasyCSP.SourceControl.Base</Super>
-<TimeChanged>64156,33033.762414</TimeChanged>
+<TimeChanged>64156,37559.664399</TimeChanged>
 <TimeCreated>64150,27632.264311</TimeCreated>
 
 <Method name="OnMenuItem">
@@ -224,7 +224,9 @@ Cache doesn't play well with bash if the command has quotes in it.</Description>
     
     * Commit changes to local the repo. This updates .git data and prepares
     * for a git push.
-    gitRepo = "EasyCSP.Configuration.Settings"->getSetting("gitRepo")
+    pcperform "set" capturing reply
+    crt ereplace(reply, @fm, char(13):char(10))
+    
     cmd = "cd " : @ME->RepoCloneDirectory : "; git nccommit"
     crt; crt "Begin commit with " : cmd
     pcperform cmd capturing reply
