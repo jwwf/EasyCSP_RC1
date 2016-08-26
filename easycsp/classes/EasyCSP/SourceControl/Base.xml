@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:26">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 19:30:11">
 <Class name="EasyCSP.SourceControl.Base">
 <Description>
 Common functions and properties
 EasyCSP.Core.Component,</Description>
 <Abstract>1</Abstract>
 <Super>%Studio.Extension.Base</Super>
-<TimeChanged>64155,55704.09642</TimeChanged>
+<TimeChanged>64155,70209.114414</TimeChanged>
 <TimeCreated>64150,82406.78222</TimeCreated>
 
 <Property name="currentProject">
@@ -34,6 +34,8 @@ The dialog are:<ul>
 </Parameter>
 
 <Property name="CSPServiceDirectory">
+<Description>
+Remember where the CSP service directory is for this namespace.</Description>
 <Type>%String</Type>
 </Property>
 
@@ -54,6 +56,12 @@ folder on disk. This allows snapshotting of a particular namespace code and data
 to stand up the same namespace on another machine.</Description>
 <Type>%Boolean</Type>
 <InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="RepoCloneDirectory">
+<Description>
+The source control directory is one level up from the export directory</Description>
+<Type>%String</Type>
 </Property>
 
 <UDLText name="T">
@@ -546,6 +554,8 @@ ByRef variable exportDirectory pointing to the finalized external directory path
     // if necessary then create the four subdirectories
     set repoDir = ##class(EasyCSP.Configuration.Settings).getSetting("exportDir")
     set:repoDir="" repoDir = ..#defaultExportDirectory
+    
+    set ..RepoCloneDirectory = repoDir
     
     set repoDir = repoDir _ slash _ $mvoconv($namespace, "MCL")
     

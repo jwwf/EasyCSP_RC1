@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:26">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 19:54:03">
 <Class name="EasyCSP.SourceControl.Git">
 <Description>
 Interface with GIT for source control. This class is NOT ready for
 production; it's just the start of the Git interface class.</Description>
 <Super>EasyCSP.SourceControl.Base</Super>
-<TimeChanged>64155,59901.939701</TimeChanged>
+<TimeChanged>64155,71641.44416</TimeChanged>
 <TimeCreated>64150,27632.264311</TimeCreated>
 
 <Method name="OnMenuItem">
@@ -194,12 +194,12 @@ Add an existing item to source control. </Description>
 <Implementation><![CDATA[
     @ME->setExportDir()
     
-    cmd = "cd " : @ME->exportDirectory : "; git add ."
+    cmd = "cd " : @ME->RepoCloneDirectory : "; git add ."
     crt "Adding all to git with '" : cmd : "'"
     pcperform cmd capturing reply
     crt ereplace(reply, @fm, char(13):char(10))
     
-    cmd = "cd " : @ME->exportDirectory : "; git add -u"
+    cmd = "cd " : @ME->RepoCloneDirectory : "; git add -u"
     crt "Staging adds and removes '" : cmd : "'"
     pcperform cmd capturing reply
     crt ereplace(reply, @fm, char(13):char(10))
@@ -222,7 +222,9 @@ Issue a git commit command in the source control directory.</Description>
     * Commit changes to local the repo. This updates .git data and prepares
     * for a git push.
     gitRepo = "EasyCSP.Configuration.Settings"->getSetting("gitRepo")
-    pcperform "cd " : @ME->exportDirectory : ";git commit " : gitRepo capturing reply
+    cmd = "cd " : @ME->RepoCloneDirectory : ";git commit -m " : dquote(@ME->getUniversalTime())
+    crt "Begin commit with " : cmd
+    pcperform cmd capturing reply
     crt ereplace(reply, @fm, char(13):char(10))
     
     return 1
@@ -241,7 +243,9 @@ Issue a git commit command in the source control directory.</Description>
     * Commit changes to local the repo. This updates .git data and prepares
     * for a git push.
     gitRepo = "EasyCSP.Configuration.Settings"->getSetting("gitRepo")
-    pcperform "cd " : @ME->exportDirectory : ";git push " : gitRepo capturing reply
+    cmd = "cd " : @ME->RepoCloneDirectory : ";git push --all"
+    crt "Begin push with " : cmd
+    pcperform cmd capturing reply
     crt ereplace(reply, @fm, char(13):char(10))
     
     return 1
@@ -274,7 +278,7 @@ a csp subdirectory under source control.
     * https://git-scm.com/docs/git-init
     @ME->setExportDir() ; * initialize the export directory
     
-    command = "cd " : @ME->exportDirectory : "; git init " : @ME->exportDirectory
+    command = "cd " : @ME->RepoCloneDirectory : "; git init " : @ME->exportDirectory
     crt "Begin init"
     crt command
     
@@ -284,7 +288,7 @@ a csp subdirectory under source control.
     * Clone from the repo. This sets up the connection between the
     * local repo and the github repo.
     gitRepo = "EasyCSP.Configuration.Settings"->getSetting("gitRepo")
-    command = "cd " : @ME->exportDirectory : ";git clone " : gitRepo
+    command = "cd " : @ME->RepoCloneDirectory : ";git clone " : gitRepo
     crt "Begin clone"
     crt command
     
@@ -309,7 +313,9 @@ Get the current git status</Description>
     * Commit changes to local the repo. This updates .git data and prepares
     * for a git push.
     gitRepo = "EasyCSP.Configuration.Settings"->getSetting("gitRepo")
-    pcperform "cd " : @ME->exportDirectory : ";git status " : gitRepo capturing reply
+    cmd = "cd " : @ME->RepoCloneDirectory : ";git status"
+    crt "Status: " : cmd
+    pcperform cmd capturing reply
     crt ereplace(reply, @fm, char(13):char(10))
     
     return 1
