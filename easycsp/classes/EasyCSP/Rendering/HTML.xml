@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:23">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 15:38:38">
 <Class name="EasyCSP.Rendering.HTML">
 <Description>
 Abstract class used by Views and Layouts to render HTML code</Description>
 <Abstract>1</Abstract>
 <Super>EasyCSP.Core.Component,EasyCSP.Model.attributeFunctions</Super>
-<TimeChanged>64150,80004.934204</TimeChanged>
+<TimeChanged>64156,56295.33616</TimeChanged>
 <TimeCreated>64119,61782.543072</TimeCreated>
 
 <Parameter name="idPrefix">
@@ -1021,8 +1021,22 @@ by a more friendly-name wrapper class.</Description>
     
     set:$get(content)="" content = "" // if unassigned, not just empty
     
-    if (($listFind(..#voidElements,tag,1) > 0) ! ($get(content) = 0)) & ..#closeSingleTags {
-        if closeTag {
+    //(($listFind(..#voidElements,tag,1) > 0) ! ($get(content) = "")) & ..#closeSingleTags
+    
+    if +$get(closeTag) ! ..#closeSingleTags {
+        if $listFind(..#voidElements,tag,1) > 0 {
+            set html = html_" />"
+        } else {
+            set html = html_">"_content
+            if closeTag set html = html_"</"_tag_">"
+        }
+    }
+    
+    q html
+    
+    /*
+    if closeTag & ..#closeSingleTags {
+        if ($listFind(..#voidElements,tag,1) > 0) {
             q html_" />"
         } else {
             q html_">"
@@ -1032,6 +1046,7 @@ by a more friendly-name wrapper class.</Description>
         if closeTag set html = html_"</"_tag_">"
         q html
     }
+    */
 ]]></Implementation>
 </Method>
 

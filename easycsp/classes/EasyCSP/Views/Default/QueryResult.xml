@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-25 17:25:33">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 15:38:44">
 <Class name="EasyCSP.Views.Default.QueryResult">
 <Description><![CDATA[
 Display EasyCSP settings and allow an administrator to change them. Settings changes
@@ -19,7 +19,7 @@ are picked up on the next page load (regardless of viewer). These are global set
   See the License for the specific language governing permissions and
   limitations under the License.</p>]]></Description>
 <Super>EasyCSP.Views.Base</Super>
-<TimeChanged>64149,71158.703273</TimeChanged>
+<TimeChanged>64156,53448.126025</TimeChanged>
 <TimeCreated>64099,50595.898738</TimeCreated>
 
 <Method name="run">
@@ -50,6 +50,11 @@ are picked up on the next page load (regardless of viewer). These are global set
         
         do ..openTag("div")
         do ..addContent("<button name=""getCSV"" id=""getCSV"" class=""blue"" style=""float: right; margin-right:25px;"">Download</button>")
+        
+        // Example: how to examine the contents of an object. This displays the
+        // parameters hash array.
+        //do ..addStreamContent(..captureObjDump(parameters))
+        
         do ..closeTag("div")
 
         set location = %EasyCSPApp.getAppUrl()_"Queryresult/CSV"
@@ -68,11 +73,14 @@ are picked up on the next page load (regardless of viewer). These are global set
         do %EasyCSPApp.controller.layout.scripting.registerScript("csvscript", outputStream, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
         
     }
-        
+    
+    // Retrieve any parameters and copy those to a private array for the table widget.
+    // It's not entirely necessary to copy them over but it does keep things neat.
     set tableOptions = ##class(EasyCSP.Core.HashArray).%New()
-    do tableOptions.set("queryId", queryId)
+    //do tableOptions.set("queryId", queryId)
     do tableOptions.copyFrom(parameters)
     
+    // Make a table object
     set activeTable = ##class(EasyCSP.Web.Widget.ActiveTable).%New(tableOptions)
     
     // Just establish the widget div area in the layout. JQuery will take care of the rest.
