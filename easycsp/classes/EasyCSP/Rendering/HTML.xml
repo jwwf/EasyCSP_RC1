@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 15:38:38">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 08:28:07">
 <Class name="EasyCSP.Rendering.HTML">
 <Description>
 Abstract class used by Views and Layouts to render HTML code</Description>
 <Abstract>1</Abstract>
 <Super>EasyCSP.Core.Component,EasyCSP.Model.attributeFunctions</Super>
-<TimeChanged>64156,56295.33616</TimeChanged>
+<TimeChanged>64157,30457.773579</TimeChanged>
 <TimeCreated>64119,61782.543072</TimeCreated>
 
 <Parameter name="idPrefix">
@@ -140,6 +140,82 @@ the page output stream. <variable>data</variable> should be an instance of a %Gl
     do ..stream.MoveToEnd()
     do:..ReturnGeneratedOutput=0 ..stream.CopyFrom(data)
     quit data
+]]></Implementation>
+</Method>
+
+<Method name="barcode">
+<Description><![CDATA[
+<p>
+Display a barcode on the screen. If the barcode type isn't specified the system 
+default in the system SETTINGS will prevail. If the desired output type must differ
+from the system default then override that in the "settings" subarray in <i>parameters</i>.
+If type isn't specified in the settings array "type" node and is also missing
+in the global SETTINGS table then code39 is assumed.
+</p>
+<p>
+<i>Required</i>: "settings" as EasyCSP.Core.HashArray. Elements in this
+array may include:
+<ul>
+    <li>barWidth</li>
+    <li>barHeight</li>
+    <li>moduleSize</li>
+    <li>showHRI (show human readable interpretation)</li>
+    <li>bgColor</li>
+    <li>color (bar color)</li>
+    <li>fontSize (if HRI is displayed)</li>
+    <li>output (output type: css, svg, gmp, canvas)</li>
+    <li>type (see the following)</li>
+</ul>
+Available types are:
+<ul>
+    <li>codabar</li>
+    <li>code11</li>
+    <li>code13</li>
+    <li>code39</li>
+    <li>code93</li>
+    <li>code128</li>
+    <li>ean8</li>
+    <li>ean13</li>
+    <li>std25</li>
+    <li>msi</li>
+    <li>datamatrix</li>
+</ul>
+</p>
+<p>
+The parameters <i>must</i> include a value and the value must be appropriate for
+the barcode type. An id (""id"") is also required.
+<p>
+This generator will require a DOM id ("id" in the parameters)]]></Description>
+<FormalSpec>parameters:EasyCSP.Core.HashArray=""</FormalSpec>
+<Implementation><![CDATA[
+    set:$get(parameters)="" parameters = ##class(EasyCSP.Core.HashArray).%New()
+    quit:parameters.get("id")="" ..addContent("Barcode requires ""id"" in the setup parameters.")
+    quit:parameters.get("settings")="" ..addContent("Barcode requires ""settings"" in the setup parameters.")
+    quit:parameters.get("value")="" ..addContent("Barcode requires ""value"" in the setup parameters.")
+    
+    set codes = ##class(EasyCSP.Core.Array).%New()
+    do codes.split("codabar,code11,code13,code39,code93,code128,ean8,ean13,std25,msi,datamatrix")
+    
+    set id = parameters.get("id")
+    
+    set settings = parameters.get("settings")
+    do parameters.unset("settings") ; these are different from the HTML styling preferences.
+    
+    set value = parameters.get("value")
+    do parameters.unset("value") ; also not needed for HTML styling
+    
+    set type = settings.get("type")
+    set:type="" type = ##class(EasyCSP.Configuration.Settings).getSetting("barcodeType")
+    set:type="" type="code39"
+    set:codes.find(type)=0 type = "code39"
+    
+    do ..openTag("div", parameters)
+    do settings.set("useComma", 1) // tell the attribute renderer to separate attributes with a comma instead of a space
+    set attributes = ..renderAttributes(settings)
+    set barcodeScript = "$(""#"_id_""").barcode("""_value_""","_attributes_");"
+    
+    // Tell the script manager to add the script to the page at the end for document.ready.
+    do %EasyCSPApp.controller.layout.scripting.registerScript("onsubmit", barcodeScript, %EasyCSPApp.controller.layout.scripting.%GetParameter("posEnd"), 1)
 ]]></Implementation>
 </Method>
 
@@ -828,14 +904,25 @@ a form. The name is set to the class name of the currently-running controller.</
 
 <Method name="renderAttributes">
 <Description><![CDATA[
+<p>
 Parses the <i>options</i> argument (a Core.HashArray of name-value pairs) and renders
-tag attributes.]]></Description>
+tag attributes.
+</p>
+<p>
+2016-08-27 jwwf Add "useComma" switch to options to allow rendering of attributes
+                with a comma for use in a javascript/JQuery call. Until now the
+                attributes were rendered with a space separating them only for
+                HTML. This extends the usefulness of the renderAttributes method
+                into script-construction.]]></Description>
 <FormalSpec>options:EasyCSP.Core.HashArray</FormalSpec>
 <Language>mvbasic</Language>
 <ReturnType>%String</ReturnType>
 <Implementation><![CDATA[
     if $get(options)="" then return ""
     if index($get(options),"HashArray",1) = 0 then return "" ; * not a valid parameter list
+    
+    useComma = if options->get("useComma") = "" then " " else ","
+    options->unset("useComma")
     
     specialAttributes = convert(',', @fm, "async,autofocus,autoplay,checked,controls,declare,default,defer,disabled,formnovalidate,hidden,ismap,loop,multiple,muted,nohref,noresize,novalidate,open,readonly,rfequired,reversed,scoped,seamless,selected,typemustmatch")
     
@@ -866,7 +953,11 @@ tag attributes.]]></Description>
     
     if html <> "" then html = " " : html
     
-    return convert( @fm, ' ', html)
+    if useComma then
+        return convert(@fm, ",", html)
+    end else
+        return convert( @fm, ' ', html)
+    end
 ]]></Implementation>
 </Method>
 

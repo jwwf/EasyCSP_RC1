@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-26 15:38:46">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 08:28:18">
 <Class name="EasyCSP.Web.Client.ScriptFileQueue">
 <Description>
 A structure for storing requests for javascript files output in a specified output order.</Description>
 <Abstract>1</Abstract>
 <Super>%RegisteredObject</Super>
-<TimeChanged>64140,56913.61154</TimeChanged>
+<TimeChanged>64156,80869.05352</TimeChanged>
 <TimeCreated>64120,36906.687532</TimeCreated>
 
 <Property name="scriptFilesQueue">
@@ -143,6 +143,8 @@ default set can be added any time before a page is rendered.</Description>
     do ..addPackage("validation", "jquery-validate-1.13.1.js", "jquery")
     
     do ..addPackage("modal", "libs/modal.js", "jqueryui")
+    
+    do ..addPackage("barcode", "barcode/jquery-barcode.min.js", "jquery")
     
     do ..addPackage("impromptu", "impromptu/jquery-impromptu.js", "jquery")
     
