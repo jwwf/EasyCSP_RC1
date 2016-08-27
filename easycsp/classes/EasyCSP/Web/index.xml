@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 08:28:19">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 13:40:35">
 <Class name="EasyCSP.Web.index">
 <Description><![CDATA[
 <p>
@@ -27,7 +27,7 @@ provide an entry-point into the framework system.
   See the License for the specific language governing permissions and
   limitations under the License.</p>]]></Description>
 <Super>%CSP.Page</Super>
-<TimeChanged>64144,69642.168673</TimeChanged>
+<TimeChanged>64157,49233.119317</TimeChanged>
 <TimeCreated>63478,70396.854843</TimeCreated>
 
 <Method name="OnPage">
@@ -141,7 +141,13 @@ before{Action} event handler.
         instantiated, the exception is captured for processing in OnPage().
     </li>
     <li>If an instance of the app can be made then run the controller. The
-        controller will only run the "before"+action methods.
+        controller will only run the "before"+action methods. <strong>NOTE:</strong>
+        It is not possible to write to the page at this point. Any debugging
+        information you thought might go to the screen only makes an unreadable
+        mess. The only alternative is to hold on to the exception process private
+        global and wait for OnPage to pick it up to display.
+     </li>
+ </ul>
 
 <p>
 The same %EasyCSPApp process private global will be picked back up when CSP
@@ -163,8 +169,6 @@ processes the OnPage() event.
     try {
         set %EasyCSPApp = ##class(EasyCSP.Web.Application).%New()
     } catch %EasyCSPException {
-        //write "Unrecoverable exception occurred during %New()",!
-        //d $SYSTEM.OBJ.Dump(%EasyCSPException)
         s haserror = 1
     }
     
@@ -172,13 +176,10 @@ processes the OnPage() event.
         try {
             do %EasyCSPApp.init()
         } catch %EasyCSPException {
-            //write "Unrecoverable exception occurred during init()",!
-            //d $SYSTEM.OBJ.Dump(%EasyCSPException)
         }
     }
     
     if $get(%EasyCSPException)["Exception" {
-        //d $SYSTEM.OBJ.Dump(%EasyCSPException)
         quit $$$OK // it will be noticed in OnPage
     }
     

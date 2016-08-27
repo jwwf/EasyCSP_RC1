@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 08:28:09">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 13:43:07">
 <Class name="EasyCSP.SourceControl.Git">
 <Description>
 Interface with GIT for source control. This class is NOT ready for
 production; it's just the start of the Git interface class. Be warned.
 </Description>
 <Super>EasyCSP.SourceControl.Base</Super>
-<TimeChanged>64156,39725.148245</TimeChanged>
+<TimeChanged>64157,49377.255114</TimeChanged>
 <TimeCreated>64150,27632.264311</TimeCreated>
 
 <Method name="OnMenuItem">
@@ -53,6 +53,7 @@ different. This class interfaces with git.</Description>
 <MenuItem Name="Push Repo" />
 <MenuItem Name="Export All Code"/>
 <MenuItem Name="Export All Globals" />
+<MenuItem Name="Export All CSP Files" />
 <MenuItem Name="Make Stand-up Image" />
 </Menu>
 <Menu Name="%SourceContext" Type="1">
@@ -157,6 +158,7 @@ this is useful if you change the document to change its attribute so Studio will
     do actions.set("Push Repo", "gitPush")
     do actions.set("Export All Code", "exportAll")
     do actions.set("Export All Globals", "exportGlobals")
+    do actions.set("Export All CSP Files", "exportCSP")
     do actions.set("Make Stand-up Image", "makeStandup")
     
     set sc = $$$OK

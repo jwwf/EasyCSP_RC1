@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 08:28:09">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 13:43:07">
 <Class name="EasyCSP.SourceControl.Base">
 <Description>
 Common functions and properties
 EasyCSP.Core.Component,</Description>
 <Abstract>1</Abstract>
 <Super>%Studio.Extension.Base</Super>
-<TimeChanged>64156,39076.39314</TimeChanged>
+<TimeChanged>64157,49376.749399</TimeChanged>
 <TimeCreated>64150,82406.78222</TimeCreated>
 
 <Property name="currentProject">
@@ -188,7 +188,7 @@ Copy CSP items from the Cache service directory to the source control
 <Implementation><![CDATA[
     @ME->setExportDir()
     
-    cmd = "rsync -ruv " : @ME->CSPServiceDirectory : @ME->slash() : "* " : @ME->exportDirectory : @ME->slash() : "csp/"
+    cmd = "rsync -ruvv " : @ME->CSPServiceDirectory : @ME->slash() : "* " : @ME->exportDirectory : @ME->slash() : "csp/"
     
     pcperform cmd capturing reply
     crt reply ; * echo back to the output window
