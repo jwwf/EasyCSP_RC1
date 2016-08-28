@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-27 08:30:45">
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805U)" ts="2016-08-28 12:22:15">
 <Class name="EasyCSP.Configuration.Installer">
 <Description><![CDATA[
 EasyCSP Installer.
@@ -17,7 +17,7 @@ EasyCSP Installer.
   See the License for the specific language governing permissions and
   limitations under the License.</p>]]></Description>
 <IncludeCode>%occInclude</IncludeCode>
-<TimeChanged>64152,59977.636944</TimeChanged>
+<TimeChanged>64158,44533.039441</TimeChanged>
 <TimeCreated>64150,27053.846432</TimeCreated>
 
 <XData name="EasyCSP">
@@ -238,6 +238,127 @@ Invoke the installer passing in some variables</Description>
     Do:$$$ISERR(tStatus) $system.OBJ.DisplayError(tStatus)
     
     Quit tStatus
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+/* ******************************************************************************************
+/
+/                                 License Key Generation
+/
+/  *****************************************************************************************/
+]]></Content>
+</UDLText>
+
+<Method name="encrypt">
+<Description>
+Wrapper the Cache system encryption function. This accepts and returns printable strings
+that can be stored in a global. </Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>Plaintext:%String,Key:%String,hasLength:%Boolean=0</FormalSpec>
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    encResponse="%SYSTEM.Encryption"->AESCBCEncrypt(Plaintext,Key)
+    response = OCONV(encResponse, "MX0C") ; * use an atomic system function instead of looping
+    
+    if hasLength then
+        size = oconv(oconv(len(response), "MCDX"), "MD%4")
+        response = size : response
+    end
+    
+    return response
+]]></Implementation>
+</Method>
+
+<Method name="MD5String">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InputString:%String</FormalSpec>
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    IF InputString = "" THEN RETURN ""
+    
+    BinaryString = $SYSTEM.Encryption->MD5Hash( InputString )
+    OutputString = OCONV( BinaryString, "MX0C" )
+    
+    RETURN OutputString
+]]></Implementation>
+</Method>
+
+<Method name="generateSalt">
+<Description>
+Pseudo-random key for salting the generate</Description>
+<ClassMethod>1</ClassMethod>
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    salt1 = fold(@ME->MD5String(rnd(99999)+@date), 4, @vm)
+    salt2 = fold(@ME->MD5String(rnd(99999)+@time), 4, @vm)
+    salt3 = fold(@ME->MD5String(rnd(system(99))), 4, @vm )
+    
+    * Smash the pieces of the salt together. The result will be a dynamic array where
+    * the first attribute contains the first group of four characters from each salt (@vm-delimited)
+    * and each successive attribute will contain the next group of four characters from 
+    * each salt string, and so on.
+    pKey = cats(salt1, salt2)
+    pKey = cats(pKey, salt3)
+    
+    * Take the first three groups to get enough characters
+    pKey = field(pKey, @fm, 1, 3)
+    
+    * get rid of the system delimiters
+    convert @fm:@vm:'/' to "" in pKey
+    
+    * and take the first 32 characters
+    return pKey[1,32]
+]]></Implementation>
+</Method>
+
+<Method name="getSystemId">
+<Description>
+Get the system CPU ID on linux systems</Description>
+<ClassMethod>1</ClassMethod>
+<Language>mvbasic</Language>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    if system(91) = 1 then
+        command = "wmic cpu get UniqueId"
+    end else
+        command = 'dmidecode | grep -w ID | sed "s/^.ID\: //g"'
+    end
+    
+    pcperform command capturing reply
+    return convert(" ":@fm, "", reply)
+]]></Implementation>
+</Method>
+
+<Method name="preLicense">
+<ClassMethod>1</ClassMethod>
+<Language>mvbasic</Language>
+<Implementation><![CDATA[
+    salt = @ME->generateSalt()
+    genDate = @ME->encrypt(date(), salt, 1)
+    systemId = @ME->encrypt(@ME->getSystemId(), salt, 1)
+    cacheKey = @ME->encrypt("%SYSTEM.License"->KeyAuthorizationKey(), salt, 1)
+    
+    testKey = fold(salt : genDate : systemId : cacheKey, 32)
+    padSize = mod(len(testKey),32)
+    pad = @ME->generateSalt()[1, padSize + 1]
+    
+    key = testKey : pad
+    
+    crt ; crt "============================== BEGIN KEY ==============================" ; crt
+    crt ereplace(key, @fm, char(13):char(10))
+    crt ; crt "============================== END KEY ================================" ; crt
+    
+    crt "Copy and paste this output into an email addressed to james.westleyfarrell@gmail.com"
+    crt "to receive your license key. Thank you!"
 ]]></Implementation>
 </Method>
 </Class>
